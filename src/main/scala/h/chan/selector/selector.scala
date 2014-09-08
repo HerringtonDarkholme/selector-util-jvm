@@ -152,8 +152,7 @@ class CompoundSelector(source: String) extends AbstractSelector(source) {
     case None => true
     case _ => false
   })
-  private final val SPLITER = """(?=[#\.:\[]])|(?<=[#\.:\[])""".r
-  import collection.Iterator
+  private final val SPLITER = """(?=[#\.:\[])|(?<=[#\.:\[])""".r
 
   @transient
   private val normalizedSource =
@@ -161,9 +160,12 @@ class CompoundSelector(source: String) extends AbstractSelector(source) {
     else source
   private val a = SPLITER.split(normalizedSource)
   val tpe: ElementalSelector = new ElementalSelector(a.head)
-  val simpleSelectors: Iterator[SimpleSelector] = a.tail.grouped(2).map {arr =>
+  // grouped return Iterator, which can be only TraverseOnce
+  // and exists nested in forall will Traverse several times
+  // which is undefined behavior
+  val simpleSelectors: List[SimpleSelector] = a.tail.grouped(2).map {arr =>
     SimpleSelector(arr(0), arr(1))
-  }
+  }.toList
 
   def containsSelector(selector: AbstractSelector): Boolean = selector match {
     case s: CompoundSelector =>
