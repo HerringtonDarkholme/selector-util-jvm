@@ -1,3 +1,5 @@
+// Refactor:
+// change AbstractSelector to HigherKinded
 import scala.util.matching.Regex.Match
 import scala.util.matching.Regex
 import scala.annotation.{switch}
@@ -55,14 +57,18 @@ class SelectorList(source: String) extends AbstractSelector(source) {
   private val list = source.split(",").map(new ComplexSelector(_))
   override def toString: String = list.map(_.toString).mkString(", ")
 
-  def containsSelector(selector: AbstractSelector) =
-    list.exists(_ containsSelector selector)
+  def containsSelector(selector: AbstractSelector) = selector match {
+    case sl: SelectorList =>
+      sl.list.forall(s => list.exists {sel => sel contains s})
+    case _ =>
+      false
+  }
 }
 
 // add companion object to allow function
 private object ComplexSelector {
   // modifier must be object/class level
-  private final val SELECTOR_SPLITER = """(?=[>+]|~(?!=))|(?<=[>+]|~(?!=))|(?=\s+)|(?<=\s+)"""
+  private final val SELECTOR_SPLITER = """(?=>|~(?!=)|\+(?!\d|n\)))|(?<=>|~(?!=)|\+(?!\d|n\)))|(?=\s+)|(?<=\s+)"""
   private final val CLEANER = """\s*([>+~])\s*""".r
   private final val TRIMMER = """\s+""".r
 
@@ -142,7 +148,10 @@ class ComplexSelector(sources: Array[String])
 }
 
 class CompoundSelector(source: String) extends AbstractSelector(source) {
-  require(!(source matches "[, >+]|~(?!="))
+  require(("""[, >]|~(?!=)|\+(?!\d|n\))""".r findFirstIn source) match {
+    case None => true
+    case _ => false
+  })
   private final val SPLITER = """(?=[#\.:\[]])|(?<=[#\.:\[])""".r
   import collection.Iterator
 
@@ -173,11 +182,12 @@ sealed abstract class SimpleSelector(x: String, xs: String)
   extends AbstractSelector(x + xs)
 
 object SimpleSelector {
-  def apply(x: String, xs: String): SimpleSelector = (x: @switch) match {
-    case "#"  => new IDSelector(xs)
-    case "." => new ClassSelector(xs)
-    case ":" => new PsuedoClass(xs)
-    case "[" =>
+  // optimization: use table switch
+  def apply(x: String, xs: String): SimpleSelector = (x(0): @switch) match {
+    case '#'  => new IDSelector(xs)
+    case '.' => new ClassSelector(xs)
+    case ':' => PsuedoClass(xs)
+    case '[' =>
       require(xs.last == ']')
       new AttributeSelector(xs.init)
     case _ => new ElementalSelector(x)
@@ -200,6 +210,8 @@ class ClassSelector(val cls: String) extends SimpleSelector(".", cls) {
 
 // BULLSHIT
 class AttributeSelector(source: String) extends SimpleSelector("[", source) {
+  // scala matches and only matches whole string, as Java does
+  // so ^$ anchors are redundant
   private final val Attr = """^(.*?)(?:([~|^$*]?=)(['"]?)(.*)\3)?$""".r
   val Attr(attr, rel, _, value) = source
 
@@ -211,10 +223,10 @@ class AttributeSelector(source: String) extends SimpleSelector("[", source) {
       else if (rel == null) true
       else if (rel == s.rel && value == s.value) true
       else if (s.rel == null) false
-      else (rel: @switch) match {
+      else rel match {
           case "~=" =>
             val otherVals = s.value.split("\\s+")
-            (s.rel: @switch) match {
+            s.rel match {
               case "=" => otherVals.contains(value)
               case "^=" => otherVals.init.contains(value)
               case "$=" => otherVals.tail.contains(value)
@@ -248,6 +260,95 @@ class ElementalSelector(n: String) extends SimpleSelector("", n) {
   })
 }
 
-class PsuedoClass(source: String) extends SimpleSelector(":", source) {
-  def containsSelector(selector: AbstractSelector): Boolean = ???
+abstract class PsuedoClass(source: String) extends SimpleSelector(":", source)
+
+class NthPC(pc: String, source: String) extends PsuedoClass(NthPC.format(pc, source)) {
+  val last: Boolean = pc matches "last-.*"
+  val child: Boolean = pc matches ".*?-child"
+  var a: Int = 0
+  var b: Int = 1
+  // optional B
+  private final val `An+B` = """([+-]?\d?)n([+-]\d+)?""".r
+  // optional An
+  private final val `B+An` = """([+-]?\d+)(?:([+-]\d?)n)?""".r
+
+  (source.replace(" ", "")) match {
+    case "even" =>
+      a = 2
+      b = 0
+    case "odd" =>
+      a = 2
+      b = 1
+    case `An+B`(a_, b_) =>
+      a = a_ match {
+        case "" | "+" => 1
+        case "-" => -1
+        case _ => a_.toInt
+      }
+      b = if (b_ == null) 0 else b_.toInt
+    case `B+An`(b_, a_) =>
+      b = b_.toInt
+      a = a_ match {
+        case "+" => 1
+        case "-" => -1
+        case _: String => a_.toInt
+        case _ => 0
+      }
+    case _ =>
+  }
+
+  def containsSelector(selector: AbstractSelector): Boolean = selector match {
+    case s: NthPC =>
+      if (last != s.last) return false
+      if (child != s.child) {
+        // note that child and type are mutually exclusive
+        // first-type -> first-child, but not child -> type
+        return s.child && a == 0 && b == 1 && s.a == 0 && s.b == 1
+      }
+      if (s.a == 0) {
+        if (a == 0) return b == s.b
+        val na = s.b - b
+        return (na == 0) || (
+          (na % a == 0) && (na * a > 0)
+        )
+      }
+      if (s.a > 0) {
+        if (a <= 0 || (s.a % a != 0))  return false
+        val na = s.b - b
+        return (na % a) == 0 && firstNat(a, b) <= firstNat(s.a, s.b)
+      }
+
+      if (a == 0) return s.b == b
+      lazy val stream: Stream[Int]= 0 #:: (stream.map(_+1))
+      stream.map(_ * s.a + s.b).takeWhile(_ > 0).forall {e =>
+        val na = e - b
+        (na == 0) || (na % a) == 0 && (na * a > 0)
+      }
+    case _ => false
+  }
+
+  @inline private def firstNat(a: Int, b: Int) =
+    if (b > 0) b else b % a + a
+}
+
+private object NthPC {
+  @inline def format(pc: String, source: String) = {
+    if (source.isEmpty) pc
+    else s"$pc($source)"
+  }
+}
+
+object PsuedoClass {
+  private final val PsuedoDef = """^(.+?)(?:\((.*?)\))?$""".r
+  def apply(source: String): PsuedoClass = {
+    val PsuedoDef(constructor, argument) = source
+    constructor match {
+      case "nth-child" | "nth-last-child" |"nth-of-type" | "nth-last-of-type" =>
+        new NthPC(constructor, argument)
+      case "first-child" | "first-of-type" | "last-child" | "last-of-type"  =>
+        new NthPC(constructor, "")
+      case _ => error("unsupported type")
+    }
+  }
+
 }
