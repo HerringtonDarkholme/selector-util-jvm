@@ -1,10 +1,10 @@
 // Refactor:
 // change AbstractSelector to HigherKinded
+package h.chan.selector
+
 import scala.util.matching.Regex.Match
 import scala.util.matching.Regex
 import scala.annotation.{switch}
-
-// package h.chan.selector
 
 object Selector {
   // REGEX: /*comment*/ |\ffsd | \# | .
@@ -247,6 +247,8 @@ class AttributeSelector(source: String) extends SimpleSelector("[", source) {
           case _ =>
             false
       }
+    case _ =>
+      false
   }
 }
 
@@ -347,7 +349,7 @@ object PsuedoClass {
         new NthPC(constructor, argument)
       case "first-child" | "first-of-type" | "last-child" | "last-of-type"  =>
         new NthPC(constructor, "")
-      case _ => error("unsupported type")
+      case _ => sys.error("unsupported type")
     }
   }
 
