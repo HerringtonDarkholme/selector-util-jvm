@@ -80,6 +80,7 @@ private object ComplexSelector {
     val trimmed = TRIMMER.replaceAllIn(cleaned, " ").trim
     trimmed.split(SELECTOR_SPLITER)
   }
+
 }
 
 class ComplexSelector(sources: Array[String])
@@ -101,6 +102,8 @@ class ComplexSelector(sources: Array[String])
     // to avoid recursion
     this(ComplexSelector.cleanSelector(source))
   }
+
+	def apply(combinator: String, compound: CompoundSelector): ComplexSelector = ???
 
   private def findSubSelector(combinators: Seq[String], selector: ComplexSelector): Boolean = {
     var otherXs = selector.xs
@@ -178,6 +181,8 @@ class CompoundSelector(source: String) extends AbstractSelector(source) {
       }
     case _ => false
   }
+
+	def apply(smp: SimpleSelector): CompoundSelector = ???
 }
 
 sealed abstract class SimpleSelector(x: String, xs: String)
