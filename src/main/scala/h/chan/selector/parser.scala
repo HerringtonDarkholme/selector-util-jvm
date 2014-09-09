@@ -16,23 +16,60 @@ object CSSParser extends RegexParsers {
     } |
     (CompoundParser ~ Whitespace ~ ComplexParser) ^^ {
       case cpd ~ _ ~ cpx => cpx(" ", cpd)
+    } |
+    (CompoundParser) ^^ {
+      case cpd => ComplexSelector(cpd)
     }
 
   def CompoundParser: Parser[CompoundSelector] =
     (SimpleParser ~ CompoundParser) ^^ {
       case smp ~ cmp => cmp(smp)
+    } | (SimpleParser) ^^ {
+      case smp => CompoundSelector(smp)
     }
 
   def SimpleParser: Parser[SimpleSelector] =
-    IDParser | ClassParser | PsuedoParser | AttributeParser | ElementalParser
+    IDParser | ClassParser | PsuedoParser | AttributeParser | TypeParser
 
-  def IDParser: Parser[IDSelector] = ???
+  // refer to CSS spec
+  // TODO: add namespace support
 
-  def ClassParser: Parser[ClassSelector] = ???
+  private final val h = "[0-9a-fA-F]";
+  private final val unicode = """\\{h}{1,6}(\r\n|[ \t\r\n\f])?""".replace("{h}", h)
+  private final val escape = """({unicode}|\\[^\r\n\f0-9a-f])""".replace("{unicode}", unicode)
+  private final val nonascii = """[^\\0-\\237]"""
+  private final val nmchar = "([_A-z0-9-]|{nonascii}|{escape})".replace("{nonascii}", nonascii).replace("{escape}", escape)
+  private final val nmstart = "([_A-z]|{nonascii}|{escape})".replace("{nonascii}", nonascii).replace("{escape}", escape)
+  private final val ident = "-?{nmstart}{nmchar}*".replace("{nmstart}", nmstart).replace("{nmchar}", nmchar).r
 
-  def PsuedoParser: Parser[PsuedoClass] = ???
+  def IDParser: Parser[IDSelector] = ("#" ~> ident) ^^ {
+    case id => IDSelector(id)
+  }
 
-  def AttributeParser: Parser[AttributeSelector] = ???
+  def ClassParser: Parser[ClassSelector] = ("." ~> ident) ^^ {
+    case cls => ClassSelector(cls)
+  }
 
-  def ElementalParser: Parser[ElementalSelector] = ???
+  def PsuedoParser: Parser[PsuedoClass] = (":" ~> ident) ^^ {
+    case pc => PsuedoClass(pc)
+  } |
+  (":" ~> ident ~ "(" ~ ".*?" <~ ")" ) ^^ {
+    case pc ~ _ ~ source => new NthPC(pc, source)
+  } |
+  (":not(" ~> ListParser <~ ")") ^^ {
+    case sels => NotPC(sels)
+  }
+
+  private final val rel = "[~^$*|]?=".r
+  private final val str = """'[^']*(\\'[^']*)*'|"[^"]*(\\"[^"]*)*" """.r
+  def AttributeParser: Parser[AttributeSelector] = ("[" ~> ident <~"]") ^^ {
+    case attr => AttributeSelector(attr)
+  } |
+  ("[" ~> ident ~ rel ~ (ident|str) <~ "]") ^^ {
+    case attr ~ rel ~ value => AttributeSelector(attr + rel + value)
+  }
+
+  def TypeParser: Parser[TypeSelector] = ("*" | ident) ^^ {
+    case tag => TypeSelector(tag)
+  }
 }
