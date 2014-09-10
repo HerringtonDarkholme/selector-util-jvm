@@ -70,30 +70,30 @@ case class SelectorList(list: List[ComplexSelector]) extends AbstractSelector(li
 // add companion object to allow function
 
 private object ComplexSelector {
-  def apply(cpd: CompoundSelector): ComplexSelector = ComplexSelector("", cpd, null)
+  def apply(cpd: CompoundSelector): ComplexSelector = new ComplexSelector("", cpd, None)
 }
 
-case class ComplexSelector(combinator: String, x: CompoundSelector, xs: ComplexSelector)
+case class ComplexSelector(combinator: String, x: CompoundSelector, xs: Option[ComplexSelector])
   extends AbstractSelector(xs.toString) {
 
 	def apply(combinator: String, compound: CompoundSelector): ComplexSelector =
-			ComplexSelector(combinator, compound, this)
+			new ComplexSelector(combinator, compound, Some(this))
 
   private def findSubSelector(combinators: Seq[String], selector: ComplexSelector): Boolean = {
-    var otherXs = selector.xs
+    var otherXs = selector.xs.getOrElse(null)
     var r: Boolean = false
 
     // complexity: n^2
     while (true) { // loop1
       if (otherXs == null) return false
-      r = xs.contains(otherXs) // loop2
+      r = xs.get.contains(otherXs) // loop2
       if (r) return r
-      var c: String= null
+      var c: String= ""
       // skip sibling selector
       do {
         c = otherXs.combinator
-        if (c == null) return false
-        otherXs = otherXs.xs
+        if (c.isEmpty) return false
+        otherXs = otherXs.xs.get
         if (otherXs == null) return false
       } while (!combinators.contains(c))
     }
@@ -116,7 +116,7 @@ case class ComplexSelector(combinator: String, x: CompoundSelector, xs: ComplexS
         case (a, b) if a != b =>
           false
         case _ =>
-          (xs == null) || xs.contains(s.xs)
+          (!xs.isDefined) || xs.get.contains(s.xs.get)
       }
     case _ =>
       // should not reach here
