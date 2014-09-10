@@ -76,7 +76,10 @@ private object ComplexSelector {
 }
 
 case class ComplexSelector(combinator: String, x: CompoundSelector, xs: Option[ComplexSelector])
-  extends AbstractSelector(xs.toString) {
+  extends AbstractSelector((xs match {
+    case Some(c) => c.toString
+    case _ => ""
+  }) + combinator + x) {
 
 	def apply(combinator: String, compound: CompoundSelector): ComplexSelector =
 			new ComplexSelector(combinator, compound, Some(this))
@@ -95,7 +98,7 @@ case class ComplexSelector(combinator: String, x: CompoundSelector, xs: Option[C
       do {
         c = otherXs.combinator
         if (c.isEmpty) return false
-        otherXs = otherXs.xs.get
+        otherXs = otherXs.xs.getOrElse(null)
         if (otherXs == null) return false
       } while (!combinators.contains(c))
     }
@@ -110,15 +113,13 @@ case class ComplexSelector(combinator: String, x: CompoundSelector, xs: Option[C
       // guarantee contains call against ComplexSelector
       if (combinator.isEmpty) return r
 
-      (combinator, s.combinator) match {
-        case (" ", ">") =>
+      (combinator(0): @switch) match {
+        case ' ' =>
           findSubSelector(Seq(" ", ">"), s)
-        case ("~", "+") =>
+        case '~' =>
           findSubSelector(Seq("~", "+"), s)
-        case (a, b) if a != b =>
-          false
         case _ =>
-          (!xs.isDefined) || xs.get.contains(s.xs.get)
+          xs.get.contains(s.xs.get)
       }
     case _ =>
       // should not reach here

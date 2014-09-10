@@ -1,8 +1,9 @@
 package h.chan.selector
 
 import scala.util.parsing.combinator.RegexParsers
+import scala.util.parsing.combinator.PackratParsers
 
-object CSSParser extends RegexParsers {
+object CSSParser extends RegexParsers with PackratParsers {
 
   override def skipWhitespace = false
 
@@ -12,13 +13,13 @@ object CSSParser extends RegexParsers {
 
   private final val Combinator = """\s*[+>~]\s*""".r
   private final val Whitespace = """\s+""".r
-  def ComplexParser: Parser[ComplexSelector] =
-    (CompoundParser ~ Combinator ~ ComplexParser) ^^ {
-      case cpd ~ cmb ~ cpx =>
+  lazy val ComplexParser: PackratParser[ComplexSelector] =
+    (ComplexParser ~ Combinator ~ CompoundParser) ^^ {
+      case cpx ~ cmb ~ cpd =>
         cpx(cmb.trim, cpd)
     } |
-    (CompoundParser ~ Whitespace ~ ComplexParser) ^^ {
-      case cpd ~ _ ~ cpx =>
+    (ComplexParser ~ Whitespace ~ CompoundParser) ^^ {
+      case cpx ~ _ ~ cpd =>
         cpx(" ", cpd)
     } |
     (CompoundParser) ^^ {
@@ -79,7 +80,6 @@ object CSSParser extends RegexParsers {
   }
 
   def TypeParser: Parser[TypeSelector] = ("*" | ident) ^^ {
-    case tag =>
-      TypeSelector(tag)
+    case tag => TypeSelector(tag)
   }
 }
