@@ -12,9 +12,9 @@ object SelectorTest {
       !Selector("div a").contains("a")
     )
 
-    // assert(
-    //   Selector(":nth-child(6)").contains(":nth-child(6-6n)")
-    // )
+    assert(
+      Selector(":nth-child(6)").contains(":nth-child(6-6n)")
+    )
 
     // assert(
     //   Selector(":nth-last-child(6)").contains(":nth-last-child(6-6n)")
@@ -59,24 +59,25 @@ object SelectorTest {
     assert(
       !Selector("a.x").contains(".x")
     )
+    // #1 is not a valid selector
     assert(
-      Selector("a#1").contains("a#1")
+      Selector("a#a1").contains("a#a1")
     )
     assert(
-      Selector("a#1").contains("a.x.y#1")
+      Selector("a#a1").contains("a.x.y#a1")
     )
     assert(
-      Selector("a.x#1").contains("a#1.x")
+      Selector("a.x#a1").contains("a#a1.x")
     )
     assert(
-      !Selector("a.x#1.y").contains("a#1")
+      !Selector("a.x#a1.y").contains("a#a1")
     )
     assert(
       Selector("[title]").contains("[title]")
     )
-    // assert(
-    //   Selector("[title]").contains("a[title=hello]")
-    // )
+    assert(
+      Selector("[title]").contains("a[title=hello]")
+    )
     // assert(
     //   Selector("[title^=h]").contains("a[title=hello]")
     // )
