@@ -21,11 +21,8 @@ object CSSParser extends RegexParsers {
       case cpd => ComplexSelector(cpd)
     }
 
-  def CompoundParser: Parser[CompoundSelector] =
-    (SimpleParser ~ CompoundParser) ^^ {
-      case smp ~ cmp => cmp(smp)
-    } | (SimpleParser) ^^ {
-      case smp => CompoundSelector(smp)
+  def CompoundParser: Parser[CompoundSelector] = rep1(SimpleParser) ^^ {
+      case sl => CompoundSelector(sl)
     }
 
   def SimpleParser: Parser[SimpleSelector] =
