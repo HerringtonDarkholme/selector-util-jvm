@@ -16,7 +16,7 @@ object Selector {
   // consider conditional normalization:
   // normalize only when / or \\ exists
   def apply(source: String): SelectorList = {
-		val k = CSSParser.parseAll(CSSParser.ListParser, normalize(source))
+    val k = CSSParser.parseAll(CSSParser.ListParser, normalize(source))
     k.get
   }
 
@@ -81,8 +81,8 @@ case class ComplexSelector(combinator: String, x: CompoundSelector, xs: Option[C
     case _ => ""
   }) + combinator + x) {
 
-	def apply(combinator: String, compound: CompoundSelector): ComplexSelector =
-			new ComplexSelector(combinator, compound, Some(this))
+  def apply(combinator: String, compound: CompoundSelector): ComplexSelector =
+    new ComplexSelector(combinator, compound, Some(this))
 
   private def findSubSelector(combinators: Seq[String], selector: ComplexSelector): Boolean = {
     var otherXs = selector.xs.getOrElse(null)
@@ -128,7 +128,7 @@ case class ComplexSelector(combinator: String, x: CompoundSelector, xs: Option[C
 }
 
 case class CompoundSelector(simpleSelectors: List[SimpleSelector])
-	extends AbstractSelector(simpleSelectors.mkString("")) {
+  extends AbstractSelector(simpleSelectors.mkString("")) {
 
   val tpe: TypeSelector = new TypeSelector("*")
 
