@@ -1,6 +1,5 @@
 // Refactor:
 // change AbstractSelector to HigherKinded
-// to Implement add we need a monoid trait
 package h.chan.selector
 
 import scala.util.matching.Regex.Match
@@ -13,12 +12,13 @@ object Selector {
     "comment", "hexDigits", "specialChar"
   )
 
+  // TODO: handle error
   // consider conditional normalization:
   // normalize only when / or \\ exists
-  def apply(source: String): SelectorList = SelectorList {
-		// TODO: handle error
-		CSSParser.parseAll(CSSParser.ListParser, normalize(source)).get
-	}
+  def apply(source: String): SelectorList = {
+		val k = CSSParser.parseAll(CSSParser.ListParser, normalize(source))
+    k.get
+  }
 
   def normalize(source: String) = REGEX.replaceAllIn(source, replacer _)
 
@@ -70,11 +70,16 @@ case class SelectorList(list: List[ComplexSelector]) extends AbstractSelector(li
 // add companion object to allow function
 
 private object ComplexSelector {
-  def apply(cpd: CompoundSelector): ComplexSelector = new ComplexSelector("", cpd, None)
+  def apply(cpd: CompoundSelector): ComplexSelector = {
+    ComplexSelector("", cpd, None)
+  }
 }
 
 case class ComplexSelector(combinator: String, x: CompoundSelector, xs: Option[ComplexSelector])
-  extends AbstractSelector(xs.toString) {
+  extends AbstractSelector((xs match {
+    case Some(c) => c.toString
+    case _ => ""
+  }) + combinator + x) {
 
 	def apply(combinator: String, compound: CompoundSelector): ComplexSelector =
 			new ComplexSelector(combinator, compound, Some(this))
@@ -93,7 +98,7 @@ case class ComplexSelector(combinator: String, x: CompoundSelector, xs: Option[C
       do {
         c = otherXs.combinator
         if (c.isEmpty) return false
-        otherXs = otherXs.xs.get
+        otherXs = otherXs.xs.getOrElse(null)
         if (otherXs == null) return false
       } while (!combinators.contains(c))
     }
@@ -108,15 +113,13 @@ case class ComplexSelector(combinator: String, x: CompoundSelector, xs: Option[C
       // guarantee contains call against ComplexSelector
       if (combinator.isEmpty) return r
 
-      (combinator, s.combinator) match {
-        case (" ", ">") =>
+      (combinator(0): @switch) match {
+        case ' ' =>
           findSubSelector(Seq(" ", ">"), s)
-        case ("~", "+") =>
+        case '~' =>
           findSubSelector(Seq("~", "+"), s)
-        case (a, b) if a != b =>
-          false
         case _ =>
-          (!xs.isDefined) || xs.get.contains(s.xs.get)
+          xs.get.contains(s.xs.get)
       }
     case _ =>
       // should not reach here
@@ -145,18 +148,18 @@ case class CompoundSelector(simpleSelectors: List[SimpleSelector])
 sealed abstract class SimpleSelector(x: String, xs: String)
   extends AbstractSelector(x + xs)
 
-object SimpleSelector {
-  // optimization: use table switch
-  def apply(x: String, xs: String): SimpleSelector = (x(0): @switch) match {
-    case '#'  => new IDSelector(xs)
-    case '.' => new ClassSelector(xs)
-    case ':' => PsuedoClass(xs)
-    case '[' =>
-      require(xs.last == ']')
-      new AttributeSelector(xs.init)
-    case _ => new TypeSelector(x)
-  }
-}
+// object SimpleSelector {
+//   // optimization: use table switch
+//   def apply(x: String, xs: String): SimpleSelector = (x(0): @switch) match {
+//     case '#'  => new IDSelector(xs)
+//     case '.' => new ClassSelector(xs)
+//     case ':' => PsuedoClass(xs)
+//     case '[' =>
+//       require(xs.last == ']')
+//       new AttributeSelector(xs.init)
+//     case _ => new TypeSelector(x)
+//   }
+// }
 
 case class IDSelector(val id: String) extends SimpleSelector("#", id) {
   def containsSelector(selector: AbstractSelector): Boolean = selector match {
@@ -304,7 +307,7 @@ private object NthPC {
   }
 }
 
-case class NotPC(sels: List[ComplexSelector]) extends PsuedoClass(sels.toString) {
+case class NotPC(sels: SelectorList) extends PsuedoClass(sels.toString) {
   def containsSelector(sel: AbstractSelector) = true
 }
 
