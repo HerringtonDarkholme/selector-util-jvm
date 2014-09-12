@@ -379,7 +379,6 @@ object SelectorTest {
 
       Selector("div a:first-of-type").contains("div>span#a1+a:first-of-type")
 
-
   }
 
 }

@@ -12,6 +12,7 @@ object Selector {
     "comment", "hexDigits", "specialChar"
   )
 
+  // TODO: handle error
   // consider conditional normalization:
   // normalize only when / or \\ exists
   def apply(source: String): SelectorList = new SelectorList(normalize(source))
@@ -94,7 +95,6 @@ class ComplexSelector(sources: Array[String])
     if (sources.length > 2) new ComplexSelector(sources.dropRight(2))
     else if (sources.length > 1) new ComplexSelector(Array(""))
     else null
-
 
   def this(source: String) = {
     // this must be the first statement
