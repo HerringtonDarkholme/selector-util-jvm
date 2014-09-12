@@ -1,6 +1,5 @@
 // Refactor:
 // change AbstractSelector to HigherKinded
-// to Implement add we need a monoid trait
 package h.chan.selector
 
 import scala.util.matching.Regex.Match
@@ -15,10 +14,7 @@ object Selector {
 
   // consider conditional normalization:
   // normalize only when / or \\ exists
-  def apply(source: String): SelectorList = SelectorList {
-		// TODO: handle error
-		CSSParser.parseAll(CSSParser.ListParser, normalize(source)).get
-	}
+  def apply(source: String): SelectorList = new SelectorList(normalize(source))
 
   def normalize(source: String) = REGEX.replaceAllIn(source, replacer _)
 
@@ -55,9 +51,11 @@ sealed abstract class AbstractSelector(source: String) {
     containsSelector(Selector(selectorSource))
 }
 
-case class SelectorList(list: List[ComplexSelector]) extends AbstractSelector(list.mkString(", ")) {
+class SelectorList(source: String) extends AbstractSelector(source) {
   // consider lazy
   // guarantee ComplexSelector contains ComplexSelector
+  private val list = source.split(",").map(new ComplexSelector(_))
+  override def toString: String = list.map(_.toString).mkString(", ")
 
   def containsSelector(selector: AbstractSelector) = selector match {
     case sl: SelectorList =>
@@ -68,32 +66,57 @@ case class SelectorList(list: List[ComplexSelector]) extends AbstractSelector(li
 }
 
 // add companion object to allow function
-
 private object ComplexSelector {
-  def apply(cpd: CompoundSelector): ComplexSelector = new ComplexSelector("", cpd, None)
+  // modifier must be object/class level
+  private final val SELECTOR_SPLITER = """(?=>|~(?!=)|\+(?!\d|n\)))|(?<=>|~(?!=)|\+(?!\d|n\)))|(?=\s+)|(?<=\s+)"""
+  private final val CLEANER = """\s*([>+~])\s*""".r
+  private final val TRIMMER = """\s+""".r
+
+  def cleanSelector(source: String): Array[String] = {
+    // workaround for js's split
+    require(source.indexOf(',') < 0)
+    // ?? +~ should not appear here
+    val cleaned = CLEANER.replaceAllIn(source, "$1")
+    val trimmed = TRIMMER.replaceAllIn(cleaned, " ").trim
+    trimmed.split(SELECTOR_SPLITER)
+  }
 }
 
-case class ComplexSelector(combinator: String, x: CompoundSelector, xs: Option[ComplexSelector])
-  extends AbstractSelector(xs.toString) {
+class ComplexSelector(sources: Array[String])
+  extends AbstractSelector(sources.mkString("")) {
 
-	def apply(combinator: String, compound: CompoundSelector): ComplexSelector =
-			new ComplexSelector(combinator, compound, Some(this))
+  require(sources.length > 0)
+  val x: CompoundSelector = new CompoundSelector(sources.last)
+  val combinator: String =
+    if (sources.length > 1) sources.init.last
+    else null
+  val xs: ComplexSelector =
+    if (sources.length > 2) new ComplexSelector(sources.dropRight(2))
+    else if (sources.length > 1) new ComplexSelector(Array(""))
+    else null
+
+
+  def this(source: String) = {
+    // this must be the first statement
+    // to avoid recursion
+    this(ComplexSelector.cleanSelector(source))
+  }
 
   private def findSubSelector(combinators: Seq[String], selector: ComplexSelector): Boolean = {
-    var otherXs = selector.xs.getOrElse(null)
+    var otherXs = selector.xs
     var r: Boolean = false
 
     // complexity: n^2
     while (true) { // loop1
       if (otherXs == null) return false
-      r = xs.get.contains(otherXs) // loop2
+      r = xs.contains(otherXs) // loop2
       if (r) return r
-      var c: String= ""
+      var c: String= null
       // skip sibling selector
       do {
         c = otherXs.combinator
-        if (c.isEmpty) return false
-        otherXs = otherXs.xs.get
+        if (c == null) return false
+        otherXs = otherXs.xs
         if (otherXs == null) return false
       } while (!combinators.contains(c))
     }
@@ -106,17 +129,15 @@ case class ComplexSelector(combinator: String, x: CompoundSelector, xs: Option[C
       if (!r) return r
 
       // guarantee contains call against ComplexSelector
-      if (combinator.isEmpty) return r
+      if (combinator == null) return r
 
-      (combinator, s.combinator) match {
-        case (" ", ">") =>
+      combinator match {
+        case " " =>
           findSubSelector(Seq(" ", ">"), s)
-        case ("~", "+") =>
+        case "~" =>
           findSubSelector(Seq("~", "+"), s)
-        case (a, b) if a != b =>
-          false
         case _ =>
-          (!xs.isDefined) || xs.get.contains(s.xs.get)
+          (xs == null) || xs.contains(s.xs)
       }
     case _ =>
       // should not reach here
@@ -124,10 +145,25 @@ case class ComplexSelector(combinator: String, x: CompoundSelector, xs: Option[C
   }
 }
 
-case class CompoundSelector(simpleSelectors: List[SimpleSelector])
-	extends AbstractSelector(simpleSelectors.mkString("")) {
+class CompoundSelector(source: String) extends AbstractSelector(source) {
+  require(("""[, >]|~(?!=)|\+(?!\d|n\))""".r findFirstIn source) match {
+    case None => true
+    case _ => false
+  })
+  private final val SPLITER = """(?=[#\.:\[])|(?<=[#\.:\[])""".r
 
-  val tpe: TypeSelector = new TypeSelector("*")
+  @transient
+  private val normalizedSource =
+    if ("#.:[" contains source(0)) "*" + source
+    else source
+  private val a = SPLITER.split(normalizedSource)
+  val tpe: ElementalSelector = new ElementalSelector(a.head)
+  // grouped return Iterator, which can be only TraverseOnce
+  // and exists nested in forall will Traverse several times
+  // which is undefined behavior
+  val simpleSelectors: List[SimpleSelector] = a.tail.grouped(2).map {arr =>
+    SimpleSelector(arr(0), arr(1))
+  }.toList
 
   def containsSelector(selector: AbstractSelector): Boolean = selector match {
     case s: CompoundSelector =>
@@ -154,18 +190,18 @@ object SimpleSelector {
     case '[' =>
       require(xs.last == ']')
       new AttributeSelector(xs.init)
-    case _ => new TypeSelector(x)
+    case _ => new ElementalSelector(x)
   }
 }
 
-case class IDSelector(val id: String) extends SimpleSelector("#", id) {
+class IDSelector(val id: String) extends SimpleSelector("#", id) {
   def containsSelector(selector: AbstractSelector): Boolean = selector match {
     case s: IDSelector => id == s.id
     case _ => false
   }
 }
 
-case class ClassSelector(val cls: String) extends SimpleSelector(".", cls) {
+class ClassSelector(val cls: String) extends SimpleSelector(".", cls) {
   def containsSelector(selector: AbstractSelector) = selector match {
     case s: ClassSelector => cls == s.cls
     case _ => false
@@ -173,7 +209,7 @@ case class ClassSelector(val cls: String) extends SimpleSelector(".", cls) {
 }
 
 // BULLSHIT
-case class AttributeSelector(source: String) extends SimpleSelector("[", source) {
+class AttributeSelector(source: String) extends SimpleSelector("[", source) {
   // scala matches and only matches whole string, as Java does
   // so ^$ anchors are redundant
   private final val Attr = """^(.*?)(?:([~|^$*]?=)(['"]?)(.*)\3)?$""".r
@@ -216,12 +252,12 @@ case class AttributeSelector(source: String) extends SimpleSelector("[", source)
   }
 }
 
-case class TypeSelector(n: String) extends SimpleSelector("", n) {
+class ElementalSelector(n: String) extends SimpleSelector("", n) {
   val name = if (n == null || n.isEmpty) "*" else n
   @inline private def isUniversal = name == "*"
 
   def containsSelector(selector: AbstractSelector): Boolean = isUniversal || (selector match {
-    case s: TypeSelector => name == s.name
+    case s: ElementalSelector => name == s.name
     case _ => isUniversal
   })
 }
@@ -302,10 +338,6 @@ private object NthPC {
     if (source.isEmpty) pc
     else s"$pc($source)"
   }
-}
-
-case class NotPC(sels: List[ComplexSelector]) extends PsuedoClass(sels.toString) {
-  def containsSelector(sel: AbstractSelector) = true
 }
 
 object PsuedoClass {
