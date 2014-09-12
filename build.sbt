@@ -1,4 +1,4 @@
-jmhSettings
+// jmhSettings
 
 organization := "h.chan"
 

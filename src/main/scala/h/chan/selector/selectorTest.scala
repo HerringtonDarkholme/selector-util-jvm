@@ -1,12 +1,35 @@
 package h.chan.selector
 
-import org.openjdk.jmh.annotations._
+// import org.openjdk.jmh.annotations._
 
 // @State(Scope.Benchmark)
-class SelectorTest {
+object SelectorTest {
 
 	// @Benchmark
-  def test(): Unit = {
+  def main(args: Array[String]): Unit = {
+    test()
+    var i = 100
+    var then = System.nanoTime
+    while (i > 0) {
+      bench()
+      i -= 1
+    }
+    var now = System.nanoTime
+    var benchmark = (now -then)/1e6
+    println("warmup | 100 loops | time: " + benchmark + "ms")
+
+    i = 100
+    then = System.nanoTime
+    while (i > 0) {
+      bench()
+      i -= 1
+    }
+    now = System.nanoTime
+    benchmark = (now -then)/1e6
+    println("bench | 100 loops | time: " + benchmark + "ms")
+  }
+
+  def test() = {
     assert(
       Selector("a").contains("a")
     )
@@ -185,5 +208,178 @@ class SelectorTest {
     assert(
       Selector("div a:first-of-type").contains("div>span#a1+a:first-of-type")
     )
+
+    println("All test passed")
   }
+
+  def bench() = {
+      Selector("a").contains("a")
+      !Selector("a").contains("b")
+      !Selector("div a").contains("a")
+      Selector(":nth-child(6)").contains(":nth-child(6-6n)")
+      Selector(":nth-last-child(6)").contains(":nth-last-child(6-6n)")
+
+
+      !Selector(":nth-child(2n+3)").contains(":nth-child(2n-1)")
+
+
+
+      !Selector("[title*=hello]").contains("[title]")
+
+
+
+      Selector("*").contains("a, b")
+
+
+
+      !Selector("a").contains("*")
+
+
+      Selector(".x").contains(".x")
+
+
+      Selector(".x").contains("a.x")
+
+
+      Selector(".x").contains("*.x")
+
+
+      Selector(".x").contains(".x.y")
+
+
+      Selector(".x").contains(".y.x")
+
+
+      !Selector(".x").contains(".y")
+
+
+      !Selector(".x.y").contains(".y")
+
+
+      !Selector("a.x").contains(".x")
+
+    // #1 is not a valid selector
+
+      Selector("a#a1").contains("a#a1")
+
+
+      Selector("a#a1").contains("a.x.y#a1")
+
+
+      Selector("a.x#a1").contains("a#a1.x")
+
+
+      !Selector("a.x#a1.y").contains("a#a1")
+
+
+      Selector("[title]").contains("[title]")
+
+
+      Selector("[title]").contains("a[title=hello]")
+
+
+      Selector("[title^=h]").contains("a[title=hello]")
+
+
+      Selector("[title$=o]").contains("a[title=hello]")
+
+
+      Selector("[lang|=en]").contains("a[lang=en-US]")
+
+
+      !Selector("[lang|=zh]").contains("a[lang=zht]")
+
+
+      Selector(":nth-child(1)").contains(":nth-child(1)")
+
+
+      Selector(":first-child").contains(":nth-child(1)")
+
+
+      Selector(":nth-child(even)").contains(":nth-child(2n)")
+
+
+
+      Selector(":nth-child(odd)").contains(":nth-child(2n+1)")
+
+
+
+      Selector(":first-of-type").contains(":first-child")
+
+
+
+      Selector(":nth-child(odd)").contains(":first-child")
+
+
+
+      !Selector(":nth-child(even)").contains(":first-child")
+
+
+
+      Selector(":nth-child(even)").contains(":nth-child(4n)")
+
+
+
+      Selector(":nth-child(n)").contains(":nth-child(3n-1)")
+
+
+
+      Selector(":nth-child(n)").contains(":nth-child(-3n+1)")
+
+
+
+      !Selector(":nth-child(6-n)").contains(":nth-child(n)")
+
+
+      Selector(":nth-child(n)").contains(":nth-child(8-n)")
+
+
+      Selector(":nth-child(8-n)").contains(":nth-child(8-2n)")
+
+
+      Selector(":nth-child(6-n)").contains("a:nth-child(6-n)")
+
+
+
+      Selector("div>a").contains("div>a")
+
+
+      !Selector("div>a").contains("section>a")
+
+
+      Selector("div a").contains("div>a")
+
+
+      Selector("div * a").contains("div>div>a")
+
+
+      Selector("section a").contains("section>div>a")
+
+
+      Selector("body>section a").contains("body>section>div>a")
+
+
+      Selector("*").contains("div#a1>a:first-of-type>span:nth-of-type(3)")
+
+
+      Selector("div#a1 span").contains("div#a2>div#a1>a:first-of-type>span:nth-of-type(3)")
+
+
+      !Selector("div#a1 span:first-child").contains("div#a1>a:first-of-type>span:nth-of-type(3)")
+
+
+
+      Selector("div#a1 span:nth-of-type(n)").contains("div#a1>a:first-of-type>span:nth-of-type(3)")
+
+
+
+     Selector("a:first-of-type").contains("span#a1 + a:first-child")
+
+
+
+      Selector("div a:first-of-type").contains("div>span#a1+a:first-of-type")
+
+
+  }
+
 }
