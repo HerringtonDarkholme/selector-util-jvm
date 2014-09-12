@@ -23,8 +23,8 @@ object Selector {
   def normalize(source: String) = REGEX.replaceAllIn(source, replacer _)
 
   // consider using Regex.unapplySeq
-	// final val HEX_REGEX = "[0-9a-fA-F]".r.pattern
-	// final val BLANK_REGEX = "\\s".r.pattern
+	// private[this] final val HEX_REGEX = "[0-9a-fA-F]".r.pattern
+	// private[this] final val BLANK_REGEX = "\\s".r.pattern
   private def replacer(m: Match): String = {
     val Seq(comment, hexDigits, specialChar) = m.subgroups
     if (comment != null) return ""
