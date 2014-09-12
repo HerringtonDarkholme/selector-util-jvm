@@ -1,5 +1,6 @@
 // Refactor:
 // change AbstractSelector to HigherKinded
+// Update: no performance gain, but it is idiomatic
 package h.chan.selector
 
 import scala.util.matching.Regex.Match
@@ -13,17 +14,19 @@ object Selector {
   )
 
   // TODO: handle error
-  // consider conditional normalization:
-  // normalize only when / or \\ exists
   def apply(source: String): SelectorList = {
     CSSParser.parseAll(CSSParser.ListParser, normalize(source)).get
   }
 
-  def normalize(source: String) = REGEX.replaceAllIn(source, replacer _)
+  // consider conditional normalization:
+  // normalize only when / or \\ exists
+	// Upadte: Performance improvment confirmed
+  def normalize(source: String) =
+		if (source.indexOf("\\") < 0 && source.indexOf("/") < 0) source
+		else	REGEX.replaceAllIn(source, replacer _)
 
   // consider using Regex.unapplySeq
-	// private[this] final val HEX_REGEX = "[0-9a-fA-F]".r.pattern
-	// private[this] final val BLANK_REGEX = "\\s".r.pattern
+  // Update: no performance gain
   private def replacer(m: Match): String = {
     val Seq(comment, hexDigits, specialChar) = m.subgroups
     if (comment != null) return ""
@@ -37,12 +40,6 @@ object Selector {
     if (nextChar matches "[0-9a-fA-F]") "\\" + ("000000" + hex).takeRight(6)
     else if (nextChar matches """\s""") "\\" + hex + " "
     else "\\" + hex
-
-    // if (HEX_REGEX.matcher(nextChar).matches)
-    //   "\\" + ("000000" + hex).takeRight(6)
-    // else if (BLANK_REGEX.matcher(nextChar).matches)
-    //   "\\" + hex + " "
-    // else "\\" + hex
   }
 }
 

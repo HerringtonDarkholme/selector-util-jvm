@@ -6,9 +6,42 @@ import org.openjdk.jmh.annotations._
 class SelectorBench {
 
 
-	val s1: String = "#glist a"
+	val facilities = Array(
+"DIV#glist>DIV:first-child>DIV:nth-of-type(2)>A:nth-of-type(2),DIV#glist>DIV:first-child>DIV:nth-of-type(2)>A:nth-of-type(3),DIV#glist>DIV:first-child>DIV:nth-of-type(2)>A:nth-of-type(4),DIV#glist>DIV:first-child>DIV:nth-of-type(2)>A:nth-of-type(5)",
+"DIV#home>DIV:nth-of-type(2)>DIV:first-child>OL:first-child ",
+"DIV#tophot ",
+"DIV#topbar>DIV:first-of-type>A:nth-of-type(10) ",
+"DIV#topbar+DIV>DIV:first-child>DIV:nth-of-type(2)>FORM:first-child ",
+"A#publistbtn ",
+"SPAN#welcome-info>SPAN:first-child>A:first-child ",
+"DIV#top-filters>FORM:first-child>DIV:first-of-type ",
+"DIV#top-filters>FORM:first-child>DIV:nth-of-type(2) ",
+"DIV#searchview>DIV:first-child>FORM:first-child>INPUT:first-child ",
+"A#publistbtn ",
+"UL#media ",
+"DIV#all-list+DIV ",
+"DIV#top-filters>FORM:first-child ",
+"DIV#searchview>DIV:first-child>FORM:first-child>INPUT:first-child ",
+"A#publistbtn ",
+"UL#media ",
+"DIV#all-list+DIV ",
+"SCRIPT#fold-point+DIV>DIV:nth-of-type(3)>DIV:first-of-type ",
+"A#publistbtn ",
+"DIV#related-ads ",
+"DIV#top-filters>FORM:first-child>DIV:first-of-type ",
+"DIV#top-filters>FORM:first-child>DIV:nth-of-type(2) ",
+"DIV#searchview>DIV:first-child>FORM:first-child>INPUT:first-child ",
+"UL#media ",
+"DIV#main>DIV:nth-of-type(3)>DIV:nth-of-type(4) ",
+"SCRIPT#fold-point+FOOTER ",
+"ARTICLE:first-child>MAIN:first-of-type>FORM:first-of-type>INPUT:nth-of-type(2) ",
+"SECTION#cat-gongzuo>H2:first-child>A:first-child,SECTION#cat-jianzhi>H2:first-child>A:first-child,SECTION#cat-cheliang>H2:first-child>A:first-child,SECTION#cat-ershou>H2:first-child>A:first-child,SECTION#cat-fang>H2:first-child>A:first-child,SECTION#cat-huodong>H2:first-child>A:first-child,SECTION#cat-chongwuleimu>H2:first-child>A:first-child,SECTION#cat-fuwu>H2:first-child>A:first-child,SECTION#cat-jiaoyupeixun>H2:first-child>A:first-child,SECTION#cat-qiuzhi>H2:first-child>A:first-child ",
+"SECTION#cat-gongzuo>DIV:first-of-type,SECTION#cat-jianzhi>DIV:first-of-type,SECTION#cat-cheliang>DIV:first-of-type,SECTION#cat-ershou>DIV:first-of-type,SECTION#cat-fang>DIV:first-of-type,SECTION#cat-huodong>DIV:first-of-type>UL:first-child,SECTION#cat-chongwuleimu>DIV:first-of-type>UL:first-child,SECTION#cat-fuwu>DIV:first-of-type,SECTION#cat-jiaoyupeixun>DIV:first-of-type>UL:first-child,SECTION#cat-qiuzhi>DIV:first-of-type>UL:first-child ",
+"DIV#weizhan ",
+"ARTICLE:first-child>HEADER:first-child>NAV:first-child>H1:first-child>A:first-child ",
+"ARTICLE:first-child>HEADER:first-child>NAV:first-child>H1:first-child>A:nth-of-type(2) ")
 
-	val candidates = Array("div#baidu_dup_fp_wrapper+article>main:first-of-type>ul:first-of-type>li:nth-of-type(49)>a:first-child>p:first-of-type",
+	val clicks = Array("div#baidu_dup_fp_wrapper+article>main:first-of-type>ul:first-of-type>li:nth-of-type(49)>a:first-child>p:first-of-type",
 "div#baidu_dup_fp_wrapper+article>main:first-of-type>div:nth-of-type(3)>a:nth-of-type(3)",
 "article:first-child>main:first-of-type>ul:first-of-type>li:nth-of-type(6)>a:first-child",
 "article:first-child>main:first-of-type>ul:first-of-type>li:nth-of-type(42)>a:first-child",
@@ -108,13 +141,11 @@ class SelectorBench {
 "div#top-filters>form:first-child>div:nth-of-type(2)>div:first-of-type>a:nth-of-type(3)")
 
   @Benchmark
-	def test() {
-    var i = candidates.length - 1
-    val s = Selector(s1)
-    while (i >= 0) {
-      s.contains(candidates(i))
-      i -= 1
+  def test() {
+    facilities.foreach { f =>
+      val s = Selector(f.trim.toLowerCase)
+        clicks.foreach(c => f.contains(c.trim.toLowerCase))
     }
-	}
+  }
 }
 
