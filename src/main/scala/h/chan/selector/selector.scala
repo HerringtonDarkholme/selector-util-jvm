@@ -16,8 +16,7 @@ object Selector {
   // consider conditional normalization:
   // normalize only when / or \\ exists
   def apply(source: String): SelectorList = {
-    val k = CSSParser.parseAll(CSSParser.ListParser, normalize(source))
-    k.get
+    CSSParser.parseAll(CSSParser.ListParser, normalize(source)).get
   }
 
   def normalize(source: String) = REGEX.replaceAllIn(source, replacer _)
@@ -47,25 +46,23 @@ object Selector {
   }
 }
 
-abstract class AbstractSelector(source: String) {
+abstract class AbstractSelector[S <: AbstractSelector[S]](source: String) {
   override def toString: String = source
 
-  def containsSelector(selector: AbstractSelector): Boolean
-  def contains(selector: AbstractSelector): Boolean = containsSelector(selector)
-  def contains(selectorSource: String): Boolean =
-    containsSelector(Selector(selectorSource))
+  def containsSelector(selector: S): Boolean
+  def contains(selector: S): Boolean = containsSelector(selector)
 }
 
-case class SelectorList(list: List[ComplexSelector]) extends AbstractSelector(list.mkString(", ")) {
+case class SelectorList(list: List[ComplexSelector])
+	extends AbstractSelector[SelectorList](list.mkString(", ")) {
   // consider lazy
   // guarantee ComplexSelector contains ComplexSelector
 
-  def containsSelector(selector: AbstractSelector) = selector match {
-    case sl: SelectorList =>
-      sl.list.forall(s => list.exists {sel => sel contains s})
-    case _ =>
-      false
-  }
+  def containsSelector(sl: SelectorList) =
+    sl.list.forall(s => list.exists {sel => sel contains s})
+
+  def contains(selectorSource: String): Boolean =
+    containsSelector(Selector(selectorSource))
 }
 
 // add companion object to allow function
@@ -77,7 +74,7 @@ private object ComplexSelector {
 }
 
 case class ComplexSelector(combinator: String, x: CompoundSelector, xs: Option[ComplexSelector])
-  extends AbstractSelector((xs match {
+  extends AbstractSelector[ComplexSelector]((xs match {
     case Some(c) => c.toString
     case _ => ""
   }) + combinator + x) {
@@ -106,48 +103,42 @@ case class ComplexSelector(combinator: String, x: CompoundSelector, xs: Option[C
     false
   }
 
-  def containsSelector(selector: AbstractSelector): Boolean = selector match {
-    case s: ComplexSelector =>
-      var r = x.contains(s.x)
-      if (!r) return r
+  def containsSelector(s: ComplexSelector): Boolean = {
+		var r = x.contains(s.x)
+		if (!r) return r
 
-      // guarantee contains call against ComplexSelector
-      if (combinator.isEmpty) return r
+		// guarantee contains call against ComplexSelector
+		if (combinator.isEmpty) return r
 
-      (combinator(0): @switch) match {
-        case ' ' =>
-          findSubSelector(Seq(" ", ">"), s)
-        case '~' =>
-          findSubSelector(Seq("~", "+"), s)
-        case _ =>
-          xs.get.contains(s.xs.get)
-      }
-    case _ =>
-      // should not reach here
-      false
+		(combinator(0): @switch) match {
+			case ' ' =>
+				findSubSelector(Seq(" ", ">"), s)
+			case '~' =>
+				findSubSelector(Seq("~", "+"), s)
+			case _ =>
+				xs.get.contains(s.xs.get)
+		}
   }
 }
 
 case class CompoundSelector(simpleSelectors: List[SimpleSelector])
-  extends AbstractSelector(simpleSelectors.mkString("")) {
+  extends AbstractSelector[CompoundSelector](simpleSelectors.mkString("")) {
 
   val tpe: TypeSelector = new TypeSelector("*")
 
-  def containsSelector(selector: AbstractSelector): Boolean = selector match {
-    case s: CompoundSelector =>
-      val r = this.tpe.contains(s.tpe)
-      if (!r) return r
-      simpleSelectors.forall {s0 =>
-        s.simpleSelectors.exists {s1 =>
-          s0.contains(s1)
-        }
-      }
-    case _ => false
+  def containsSelector(s: CompoundSelector): Boolean =  {
+		val r = this.tpe.contains(s.tpe)
+		if (!r) return r
+		simpleSelectors.forall {s0 =>
+			s.simpleSelectors.exists {s1 =>
+				s0.contains(s1)
+			}
+		}
   }
 }
 
 abstract class SimpleSelector(x: String, xs: String)
-  extends AbstractSelector(x + xs)
+  extends AbstractSelector[SimpleSelector](x + xs)
 
 // object SimpleSelector {
 //   // optimization: use table switch
@@ -163,14 +154,14 @@ abstract class SimpleSelector(x: String, xs: String)
 // }
 
 case class IDSelector(val id: String) extends SimpleSelector("#", id) {
-  def containsSelector(selector: AbstractSelector): Boolean = selector match {
+  def containsSelector(selector: SimpleSelector): Boolean = selector match {
     case s: IDSelector => id == s.id
     case _ => false
   }
 }
 
 case class ClassSelector(val cls: String) extends SimpleSelector(".", cls) {
-  def containsSelector(selector: AbstractSelector) = selector match {
+  def containsSelector(selector: SimpleSelector) = selector match {
     case s: ClassSelector => cls == s.cls
     case _ => false
   }
@@ -185,7 +176,7 @@ case class AttributeSelector(source: String) extends SimpleSelector("[", source)
 
   override def toString: String = "[" + source + "]"
 
-  def containsSelector(selector: AbstractSelector): Boolean = selector match {
+  def containsSelector(selector: SimpleSelector): Boolean = selector match {
     case s: AttributeSelector =>
       if (attr != s.attr) false
       else if (rel == null) true
@@ -224,7 +215,7 @@ case class TypeSelector(n: String) extends SimpleSelector("", n) {
   val name = if (n == null || n.isEmpty) "*" else n
   @inline private def isUniversal = name == "*"
 
-  def containsSelector(selector: AbstractSelector): Boolean = isUniversal || (selector match {
+  def containsSelector(selector: SimpleSelector): Boolean = isUniversal || (selector match {
     case s: TypeSelector => name == s.name
     case _ => isUniversal
   })
@@ -267,7 +258,7 @@ class NthPC(pc: String, source: String) extends PsuedoClass(NthPC.format(pc, sou
     case _ =>
   }
 
-  def containsSelector(selector: AbstractSelector): Boolean = selector match {
+  def containsSelector(selector: SimpleSelector): Boolean = selector match {
     case s: NthPC =>
       if (last != s.last) return false
       if (child != s.child) {
@@ -309,7 +300,7 @@ private object NthPC {
 }
 
 case class NotPC(sels: SelectorList) extends PsuedoClass(sels.toString) {
-  def containsSelector(sel: AbstractSelector) = true
+  def containsSelector(sel: SimpleSelector) = true
 }
 
 object PsuedoClass {
