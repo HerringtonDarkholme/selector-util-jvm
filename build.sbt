@@ -1,3 +1,5 @@
+jmhSettings
+
 organization := "h.chan"
 
 name := "selector"
