@@ -47,7 +47,7 @@ object Selector {
   }
 }
 
-sealed abstract class AbstractSelector(source: String) {
+abstract class AbstractSelector(source: String) {
   override def toString: String = source
 
   def containsSelector(selector: AbstractSelector): Boolean
@@ -146,7 +146,7 @@ case class CompoundSelector(simpleSelectors: List[SimpleSelector])
   }
 }
 
-sealed abstract class SimpleSelector(x: String, xs: String)
+abstract class SimpleSelector(x: String, xs: String)
   extends AbstractSelector(x + xs)
 
 // object SimpleSelector {

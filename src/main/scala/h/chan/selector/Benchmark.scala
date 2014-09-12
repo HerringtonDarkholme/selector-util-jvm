@@ -1,0 +1,120 @@
+package h.chan.selector
+
+import org.openjdk.jmh.annotations._
+
+@State(Scope.Benchmark)
+class SelectorBench {
+
+
+	val s1: String = "#glist a"
+
+	val candidates = Array("div#baidu_dup_fp_wrapper+article>main:first-of-type>ul:first-of-type>li:nth-of-type(49)>a:first-child>p:first-of-type",
+"div#baidu_dup_fp_wrapper+article>main:first-of-type>div:nth-of-type(3)>a:nth-of-type(3)",
+"article:first-child>main:first-of-type>ul:first-of-type>li:nth-of-type(6)>a:first-child",
+"article:first-child>main:first-of-type>ul:first-of-type>li:nth-of-type(42)>a:first-child",
+"header#l2v-header>a:first-of-type>span:first-child",
+"article:first-child>header:first-child>nav:first-child>h1:first-child>a:first-child",
+"div#baidu_dup_fp_wrapper+article>main:first-of-type>ul:first-of-type>li:nth-of-type(9)>a:first-child>header:first-child",
+"div#baidu_dup_fp_wrapper+article>main:first-of-type>ul:first-of-type>li:first-child>a:first-child>p:first-of-type",
+"div:nth-of-type(2)>figure:first-of-type",
+"article:first-child>main:first-of-type>ul:first-of-type>li:nth-of-type(2)>a:first-child",
+"article:first-child>main:first-of-type>ul:first-of-type>li:nth-of-type(2)>a:first-child",
+"div#glist>div:nth-of-type(2)>div:first-of-type>a:nth-of-type(2)",
+"main#post-box>section:nth-of-type(5)",
+"div#main>div:first-child>a:first-child",
+"article:first-child>main:first-of-type>ul:first-of-type>li:nth-of-type(10)>a:first-child>header:first-child",
+"section#cat-cheliang>div:first-of-type>ul:first-child>li:nth-of-type(3)>a:first-child",
+"main#post-box>section:nth-of-type(3)>dl:first-child>dd:nth-of-type(3)",
+"article:first-child>main:first-of-type>form:first-child>ul:first-child>li:nth-of-type(2)>a:first-child",
+"form#validateform>p:first-of-type>button:first-child",
+"article:first-child>main:first-of-type>ul:first-of-type>li:nth-of-type(43)>a:first-child>header:first-child>h3:first-child>span:first-child",
+"div:nth-of-type(3)>div:first-child>ul:first-of-type>li:nth-of-type(3)>a:first-child",
+"div:nth-of-type(2)>figure:first-of-type",
+"div#baidu_dup_fp_wrapper+article>nav:first-of-type>ul:first-child>li:first-child>a:first-child",
+"div:nth-of-type(3)>div:first-child>ul:first-of-type>li:nth-of-type(15)>a:first-child",
+"div:nth-of-type(3)>div:first-child>div:first-child>form:first-child>div:nth-of-type(4)>span:nth-of-type(3)>a:first-child",
+"div#glist>div:nth-of-type(2)>div:first-of-type>a:nth-of-type(4)",
+"div#baidu_dup_fp_wrapper+article>main:first-of-type>ul:first-of-type>li:nth-of-type(13)>a:first-child>p:first-of-type",
+"script#fold-point+div>div:first-child>table:nth-of-type(8)>tbody:first-child>tr:nth-of-type(2)>td:first-of-type>a:nth-of-type(17)",
+"div#top-filters>form:first-child>div:nth-of-type(2)>div:first-of-type>a:first-of-type",
+"a#home_promote-410038567+a",
+"article:first-child>main:first-of-type>ul:first-of-type>li:nth-of-type(32)>a:first-child>header:first-child>h3:first-child>span:first-child",
+"a#contact-number",
+"div#baidu_dup_fp_wrapper+article>main:first-of-type>ul:first-of-type>li:nth-of-type(2)>a:first-child>p:first-of-type>span:nth-of-type(2)>small:first-child",
+"ul#media>li:nth-of-type(45)",
+"div#baidu_dup_fp_wrapper+article>main:first-of-type>ul:first-of-type>li:nth-of-type(11)>a:first-child>header:first-child>h3:first-child>span:first-child",
+"article:first-child>main:first-of-type>ul:first-of-type>li:nth-of-type(7)>a:first-child",
+"article:first-child>main:first-of-type>ul:first-of-type>li:nth-of-type(4)>a:first-child>p:first-of-type",
+"div#baidu_dup_fp_wrapper+article>main:first-of-type>ul:first-of-type>li:nth-of-type(7)>a:first-child>p:first-of-type",
+"div#all-list>ul:first-child>li:nth-of-type(3)>div:first-child>span:first-child",
+"div#baidu_dup_fp_wrapper+article>main:first-of-type>ul:first-of-type>li:nth-of-type(11)>a:first-child",
+"div#topbar>div:first-of-type>a:nth-of-type(10)",
+"article:first-child>main:first-of-type>ul:first-of-type>li:first-child>a:first-child>p:first-of-type",
+"div#searchview>div:first-child>form:first-child>input:first-child",
+"div#baidu_dup_fp_wrapper+article>main:first-of-type>ul:first-of-type>li:nth-of-type(34)>a:first-child>p:first-of-type",
+"div#baidu_dup_fp_wrapper+article>main:first-of-type>div:nth-of-type(4)>a:nth-of-type(8)",
+"a#contact-number",
+"span#welcome-info>span:first-child>a:first-child",
+"a#contact-number",
+"div#baidu_dup_fp_wrapper+article>main:first-of-type>ul:first-of-type>li:nth-of-type(12)>a:first-child>p:first-of-type",
+"div#glist>div:nth-of-type(4)>div:first-of-type>a:nth-of-type(14)",
+"div#all-list>ul:first-child>li:nth-of-type(5)>div:first-child>span:first-child>a:first-child",
+"main#post-box>section:nth-of-type(5)",
+"a#contact-chat",
+"div#baidu_dup_fp_wrapper+article>main:first-of-type>ul:first-of-type>li:nth-of-type(12)>a:first-child",
+"div#main>div:nth-of-type(4)>div:first-child>a:first-of-type",
+"article:first-child>main:first-of-type>ul:first-of-type>li:first-child>a:first-child",
+"article:first-child>main:first-of-type>ul:first-of-type>li:first-child>a:first-child>header:first-child",
+"div#baidu_dup_fp_wrapper+article>main:first-of-type>ul:first-of-type>li:nth-of-type(4)>a:first-child",
+"div#baidu_dup_fp_wrapper+article>main:first-of-type>ul:first-of-type>li:nth-of-type(3)>a:first-child>p:first-of-type",
+"div#baidu_dup_fp_wrapper+article>main:first-of-type>ul:first-of-type>li:nth-of-type(47)>a:first-child>header:first-child",
+"div:nth-of-type(3)>div:first-child>ul:first-child>li:first-child>a:nth-of-type(4)",
+"section#cat-cheliang>div:first-of-type>ul:first-child>li:nth-of-type(9)>a:first-child",
+"div#baidu_dup_fp_wrapper+article>main:first-of-type>ul:first-of-type>li:nth-of-type(3)>a:first-child>header:first-child>h3:first-child>span:first-child",
+"div#fabu_buxian+div>h1:first-child>a:first-child",
+"div#glist>div:first-child>div:nth-of-type(2)>a:nth-of-type(18)",
+"div#glist>div:nth-of-type(3)>h3:nth-of-type(3)>a:first-of-type",
+"div#glist>div:nth-of-type(5)>div:first-of-type>a:nth-of-type(34)",
+"div#sidebar+div>div:first-child>div:nth-of-type(5)>div:first-child>table:first-child>tbody:first-child>tr:nth-of-type(3)>td:nth-of-type(3)",
+"div#user-topics>ul:first-of-type>li:nth-of-type(2)>a:first-child",
+"script#fold-point+div>div:nth-of-type(3)>div:first-child>ul:first-of-type>li:nth-of-type(5)>a:first-child",
+"script#fold-point+div>div:nth-of-type(3)>div:first-child>ul:first-of-type>li:nth-of-type(8)>a:first-child",
+"div:nth-of-type(3)>div:first-child>div:first-child>form:first-child>div:first-child>a:first-of-type",
+"article#post>main:first-child>section:nth-of-type(2)>dl:first-child>dd:nth-of-type(5)",
+"a#contact-number>img:nth-of-type(8)",
+"a#p117",
+"a#p123",
+"a#p65",
+"a#p71",
+"a#publistbtn+div>small:first-of-type>a:first-of-type",
+"a#refresh-382213098",
+"article#post>main:first-child>section:nth-of-type(2)>dl:first-child>dd:nth-of-type(9)",
+"article:first-child>main:first-of-type>h3:first-child",
+"div#content+div>ul:first-child>li:nth-of-type(2)>a:first-child",
+"div#delete-success>div:first-child>span:first-child",
+"div#drop_407990063>a:first-child>img:first-of-type",
+"div#glist>div:first-child>div:nth-of-type(2)>a:nth-of-type(3)",
+"div#glist>div:nth-of-type(3)>div:first-of-type>a:nth-of-type(2)",
+"div#glist>div:nth-of-type(4)>div:first-of-type>a:nth-of-type(4)",
+"div#main>div:first-child>ul:first-child>li:nth-of-type(3)>a:first-child",
+"div#main>div:nth-of-type(4)>div:first-child>a:first-child>h3:first-child",
+"div#related-topics>ul:first-of-type>li:nth-of-type(2)>div:first-of-type>div:first-child>a:first-of-type",
+"div#related-topics>ul:first-of-type>li:nth-of-type(4)>div:first-of-type>div:first-child>a:first-of-type",
+"div#sidebar+div>div:first-child>div:nth-of-type(6)>div:first-child>table:first-child>tbody:first-child>tr:first-child>td:nth-of-type(3)>span:first-child>div:nth-of-type(3)>small:first-of-type>a:nth-of-type(10)",
+"div#tab6>div:first-child>div:nth-of-type(2)>form:first-of-type>div:first-of-type>button:first-of-type",
+"div#top-filters+ul>li:nth-of-type(11)>div:first-child>a:first-child",
+"div#top-filters+ul>li:nth-of-type(12)>div:first-child>a:first-child",
+"div#top-filters+ul>li:nth-of-type(14)>div:first-child>a:first-child",
+"div#top-filters>form:first-child>div:nth-of-type(2)>div:first-of-type>a:nth-of-type(3)")
+
+  @Benchmark
+	def test() {
+    var i = candidates.length - 1
+    val s = Selector(s1)
+    while (i >= 0) {
+      s.contains(candidates(i))
+      i -= 1
+    }
+	}
+}
+

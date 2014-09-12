@@ -2,11 +2,9 @@ package h.chan.selector
 
 import org.openjdk.jmh.annotations._
 
-@State(Scope.Benchmark)
-class SelectorTest {
+object SelectorTest {
 
-  @Benchmark
-  def test(): Unit = {
+  def main(args: Array[String]): Unit = {
     assert(
       Selector("a").contains("a")
     )
