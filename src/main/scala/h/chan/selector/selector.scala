@@ -5,7 +5,7 @@ package h.chan.selector
 
 import scala.util.matching.Regex.Match
 import scala.util.matching.Regex
-import scala.annotation.{switch}
+import scala.annotation.{switch, tailrec}
 
 object Selector {
   // REGEX: /*comment*/ |\ffsd | \# | .
@@ -43,15 +43,13 @@ object Selector {
   }
 }
 
-abstract class AbstractSelector[S <: AbstractSelector[S]](source: String) {
-  override def toString: String = source
-
+abstract class AbstractSelector[S <: AbstractSelector[S]] {
   def containsSelector(selector: S): Boolean
   def contains(selector: S): Boolean = containsSelector(selector)
 }
 
 case class SelectorList(list: List[ComplexSelector])
-	extends AbstractSelector[SelectorList](list.mkString(", ")) {
+	extends AbstractSelector[SelectorList] {
   // consider lazy
   // guarantee ComplexSelector contains ComplexSelector
 
@@ -60,52 +58,29 @@ case class SelectorList(list: List[ComplexSelector])
 
   def contains(selectorSource: String): Boolean =
     containsSelector(Selector(selectorSource))
+
+  override def toString = list.mkString(", ")
 }
 
 // add companion object to allow function
 
 private object ComplexSelector {
   def apply(cpd: CompoundSelector): ComplexSelector = {
-    ComplexSelector('\0', cpd, None)
+    new ComplexSelector('\0', cpd, null)
   }
 }
 
-case class ComplexSelector(combinator: Char, x: CompoundSelector, xs: Option[ComplexSelector])
-  extends AbstractSelector[ComplexSelector]((xs match {
-    case Some(c) => c + combinator.toString + x
-    case _ => x.toString
-  })) {
+class ComplexSelector(val combinator: Char, val x: CompoundSelector, val xs: ComplexSelector)
+  extends AbstractSelector[ComplexSelector]() {
 
   def apply(combinator: Char, compound: CompoundSelector): ComplexSelector =
-    new ComplexSelector(combinator, compound, Some(this))
+    new ComplexSelector(combinator, compound, this)
 
-  // private def findSubSelector(combinators: Seq[Char], selector: Option[ComplexSelector]): Boolean = { selector match {
-  private def findSubSelector(combinators: Seq[Char], selector: ComplexSelector): Boolean = {
-  // selector match {
-  //   case Some(s) =>
-  //     if (!combinators.contains(s.combinator)) findSubSelector(combinators, s.xs)
-  //     else xs.get.containsSelector(s)
-  //   case _ => false
-  // }
-
-    var otherXs = selector.xs.getOrElse(null)
-    var r: Boolean = false
-
-    // complexity: n^2
-    while (true) { // loop1
-      if (otherXs == null) return false
-      r = xs.get.contains(otherXs) // loop2
-      if (r) return r
-      var c: Char = '\0'
-      // skip sibling selector
-      while (!combinators.contains(c)) {
-        c = otherXs.combinator
-        if (c == '\0') return false
-        otherXs = otherXs.xs.getOrElse(null)
-        if (otherXs == null) return false
-      }
-    }
-    false
+  @tailrec
+  private def findSubSelector(combinators: Seq[Char], s: ComplexSelector): Boolean = {
+    if (s.combinator == '\0') false
+    else if (!combinators.contains(s.combinator)) findSubSelector(combinators, s.xs)
+    else containsSelector(s.xs) || findSubSelector(combinators, s.xs)
   }
 
   def containsSelector(s: ComplexSelector): Boolean = {
@@ -116,18 +91,22 @@ case class ComplexSelector(combinator: Char, x: CompoundSelector, xs: Option[Com
 		if (combinator == '\0') return r
 
 		(combinator: @switch) match {
-			case ' ' =>
-				findSubSelector(Seq(' ', '>'), s)
-			case '~' =>
-				findSubSelector(Seq('~', '+'), s)
+			case ' ' => xs.findSubSelector(Seq(' ', '>'), s)
+			case '~' => xs.findSubSelector(Seq('~', '+'), s)
 			case _ =>
-				xs.get.containsSelector(s.xs.get)
+        if (s.combinator == '\0') false
+        else xs.containsSelector(s.xs)
 		}
+  }
+
+  override def toString = xs match {
+    case _: ComplexSelector => xs + combinator.toString + x
+    case _ => x.toString
   }
 }
 
 case class CompoundSelector(simpleSelectors: List[SimpleSelector])
-  extends AbstractSelector[CompoundSelector](simpleSelectors.mkString("")) {
+  extends AbstractSelector[CompoundSelector] {
 
   val tpe: TypeSelector = new TypeSelector("*")
 
@@ -140,33 +119,38 @@ case class CompoundSelector(simpleSelectors: List[SimpleSelector])
 			}
 		}
   }
+
+  override def toString = simpleSelectors.mkString("")
 }
 
-abstract class SimpleSelector(x: String, xs: String)
-  extends AbstractSelector[SimpleSelector](x + xs)
+abstract class SimpleSelector extends AbstractSelector[SimpleSelector]
 
-case class IDSelector(val id: String) extends SimpleSelector("#", id) {
+
+case class IDSelector(val id: String) extends SimpleSelector {
   def containsSelector(selector: SimpleSelector): Boolean = selector match {
     case s: IDSelector => id == s.id
     case _ => false
   }
+
+  override def toString = "#" + id
 }
 
-case class ClassSelector(val cls: String) extends SimpleSelector(".", cls) {
+case class ClassSelector(val cls: String) extends SimpleSelector {
   def containsSelector(selector: SimpleSelector) = selector match {
     case s: ClassSelector => cls == s.cls
     case _ => false
   }
+  override def toString = "." + cls
 }
 
 // BULLSHIT
-case class AttributeSelector(attr: String, rel: Char, value: String) extends SimpleSelector("[", attr+rel+value+"]") {
+case class AttributeSelector(attr: String, rel: Char, value: String) extends SimpleSelector {
   // scala matches and only matches whole string, as Java does
   // so ^$ anchors are redundant
   // private final val Attr = """^(.*?)(?:([~|^$*]?=)(['"]?)(.*)\3)?$""".r
   // val Attr(attr, rel, _, value) = source
 
-  // override def toString: String = "[" + source + "]"
+  override def toString: String = "["+attr+rel+value+"]"
 
   def containsSelector(selector: SimpleSelector): Boolean = selector match {
     case s: AttributeSelector =>
@@ -203,7 +187,7 @@ case class AttributeSelector(attr: String, rel: Char, value: String) extends Sim
   }
 }
 
-case class TypeSelector(n: String) extends SimpleSelector("", n) {
+case class TypeSelector(n: String) extends SimpleSelector {
   val name = if (n == null || n.isEmpty) "*" else n
   @inline private def isUniversal = name == "*"
 
@@ -211,11 +195,13 @@ case class TypeSelector(n: String) extends SimpleSelector("", n) {
     case s: TypeSelector => name == s.name
     case _ => isUniversal
   })
+
+  override def toString = n
 }
 
-abstract class PsuedoClass(source: String) extends SimpleSelector(":", source)
+abstract class PsuedoClass extends SimpleSelector
 
-class NthPC(pc: String, source: String) extends PsuedoClass(NthPC.format(pc, source)) {
+class NthPC(pc: String, source: String) extends PsuedoClass {
   val last: Boolean = pc matches "last-.*"
   val child: Boolean = pc matches ".*?-child"
   // optional B
@@ -278,6 +264,8 @@ class NthPC(pc: String, source: String) extends PsuedoClass(NthPC.format(pc, sou
 
   @inline private def firstNat(a: Int, b: Int) =
     if (b > 0) b else b % a + a
+
+  override def toString = ":" + NthPC.format(pc, source)
 }
 
 private object NthPC {
@@ -287,7 +275,7 @@ private object NthPC {
   }
 }
 
-case class NotPC(sels: SelectorList) extends PsuedoClass(sels.toString) {
+case class NotPC(sels: SelectorList) extends PsuedoClass {
   def containsSelector(sel: SimpleSelector) = true
 }
 
