@@ -1,6 +1,5 @@
-// Refactor:
-// change AbstractSelector to HigherKinded
-// Update: no performance gain, but it is idiomatic
+// AbstractSelector is F-bounded Polymorphism
+//  Update: no performance gain but idiomatic
 package h.chan.selector
 
 import scala.util.matching.Regex.Match
@@ -18,7 +17,7 @@ object Selector {
     CSSParser.parseAll(CSSParser.ListParser, normalize(source)).get
   }
 
-  // consider conditional normalization:
+  // conditional normalization:
   // normalize only when / or \\ exists
 	// Upadte: Performance improvment confirmed
   def normalize(source: String) =
@@ -45,16 +44,13 @@ object Selector {
 
 abstract class AbstractSelector[S <: AbstractSelector[S]] {
   def containsSelector(selector: S): Boolean
-  def contains(selector: S): Boolean = containsSelector(selector)
 }
 
 case class SelectorList(list: List[ComplexSelector])
 	extends AbstractSelector[SelectorList] {
-  // consider lazy
-  // guarantee ComplexSelector contains ComplexSelector
 
   def containsSelector(sl: SelectorList) =
-    sl.list.forall(s => list.exists {sel => sel contains s})
+    sl.list.forall(s => list.exists {sel => sel containsSelector s})
 
   def contains(selectorSource: String): Boolean =
     containsSelector(Selector(selectorSource))
@@ -62,32 +58,20 @@ case class SelectorList(list: List[ComplexSelector])
   override def toString = list.mkString(", ")
 }
 
-// add companion object to allow function
-
-private object ComplexSelector {
-  def apply(cpd: CompoundSelector): ComplexSelector = {
-    new ComplexSelector('\0', cpd, null)
-  }
-}
-
 class ComplexSelector(val combinator: Char, val x: CompoundSelector, val xs: ComplexSelector)
   extends AbstractSelector[ComplexSelector]() {
 
-  def apply(combinator: Char, compound: CompoundSelector): ComplexSelector =
-    new ComplexSelector(combinator, compound, this)
-
   @tailrec
-  private def findSubSelector(combinators: Seq[Char], s: ComplexSelector): Boolean = {
+  private final def findSubSelector(combinators: Seq[Char], s: ComplexSelector): Boolean = {
     if (s.combinator == '\0') false
     else if (!combinators.contains(s.combinator)) findSubSelector(combinators, s.xs)
     else containsSelector(s.xs) || findSubSelector(combinators, s.xs)
   }
 
   def containsSelector(s: ComplexSelector): Boolean = {
-		var r = x.contains(s.x)
+		var r = x.containsSelector(s.x)
 		if (!r) return r
 
-		// guarantee contains call against ComplexSelector
 		if (combinator == '\0') return r
 
 		(combinator: @switch) match {
@@ -108,14 +92,14 @@ class ComplexSelector(val combinator: Char, val x: CompoundSelector, val xs: Com
 case class CompoundSelector(simpleSelectors: List[SimpleSelector])
   extends AbstractSelector[CompoundSelector] {
 
-  val tpe: TypeSelector = new TypeSelector("*")
+  // val tpe: TypeSelector = new TypeSelector("*")
 
   def containsSelector(s: CompoundSelector): Boolean =  {
-		val r = this.tpe.contains(s.tpe)
-		if (!r) return r
+		// val r = this.tpe.contains(s.tpe)
+		// if (!r) return r
 		simpleSelectors.forall {s0 =>
 			s.simpleSelectors.exists {s1 =>
-				s0.contains(s1)
+				s0.containsSelector(s1)
 			}
 		}
   }

@@ -16,15 +16,15 @@ object CSSParser extends RegexParsers with PackratParsers {
   lazy val ComplexParser: PackratParser[ComplexSelector] =
     (ComplexParser ~ Combinator ~ CompoundParser) ^^ {
       case cpx ~ cmb ~ cpd =>
-        cpx(cmb.trim.head, cpd)
+        new ComplexSelector(cmb.trim.head, cpd, cpx)
     } |
     (ComplexParser ~ Whitespace ~ CompoundParser) ^^ {
       case cpx ~ _ ~ cpd =>
-        cpx(' ', cpd)
+        new ComplexSelector(' ', cpd, cpx)
     } |
     (CompoundParser) ^^ {
       case cpd =>
-        ComplexSelector(cpd)
+        new ComplexSelector('\0', cpd, null)
     }
 
   def CompoundParser: Parser[CompoundSelector] = rep1(SimpleParser) ^^ {
