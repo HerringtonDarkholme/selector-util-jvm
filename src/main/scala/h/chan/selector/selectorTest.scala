@@ -8,7 +8,8 @@ object SelectorTest {
 	// @Benchmark
   def main(args: Array[String]): Unit = {
     test()
-    var i = 100
+    val TIMES = 1000
+    var i = TIMES
     var then = System.nanoTime
     while (i > 0) {
       bench()
@@ -16,9 +17,9 @@ object SelectorTest {
     }
     var now = System.nanoTime
     var benchmark = (now -then)/1e6
-    println("warmup | 100 loops | time: " + benchmark + "ms")
+    println(s"warmup | $TIMES loops | time: " + benchmark + "ms")
 
-    i = 100
+    i = TIMES
     then = System.nanoTime
     while (i > 0) {
       bench()
@@ -26,7 +27,7 @@ object SelectorTest {
     }
     now = System.nanoTime
     benchmark = (now -then)/1e6
-    println("bench | 100 loops | time: " + benchmark + "ms")
+    println(s"bench | $TIMES loops | time: " + benchmark + "ms")
   }
 
   def test() = {

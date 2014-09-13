@@ -43,7 +43,7 @@ object Selector {
   }
 }
 
-sealed abstract class AbstractSelector(source: String) {
+abstract class AbstractSelector(source: String) {
   override def toString: String = source
 
   def containsSelector(selector: AbstractSelector): Boolean
@@ -102,7 +102,7 @@ class ComplexSelector(sources: Array[String])
     this(ComplexSelector.cleanSelector(source))
   }
 
-  private def findSubSelector(combinators: Seq[String], selector: ComplexSelector): Boolean = {
+  @inline private def findSubSelector(combinators: Seq[String], selector: ComplexSelector): Boolean = {
     var otherXs = selector.xs
     var r: Boolean = false
 
@@ -178,7 +178,7 @@ class CompoundSelector(source: String) extends AbstractSelector(source) {
   }
 }
 
-sealed abstract class SimpleSelector(x: String, xs: String)
+abstract class SimpleSelector(x: String, xs: String)
   extends AbstractSelector(x + xs)
 
 object SimpleSelector {
