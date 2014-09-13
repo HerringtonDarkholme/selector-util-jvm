@@ -172,12 +172,18 @@ object SelectorTest {
     assert(
       Selector("div>a").contains("div>a")
     )
+
+    assert(
+      !Selector("div a").contains("div+a")
+    )
     assert(
       !Selector("div>a").contains("section>a")
     )
+
     assert(
       Selector("div a").contains("div>a")
     )
+
     assert(
       Selector("div * a").contains("div>div>a")
     )

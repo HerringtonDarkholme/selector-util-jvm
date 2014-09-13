@@ -66,20 +66,28 @@ case class SelectorList(list: List[ComplexSelector])
 
 private object ComplexSelector {
   def apply(cpd: CompoundSelector): ComplexSelector = {
-    ComplexSelector("", cpd, None)
+    ComplexSelector('\0', cpd, None)
   }
 }
 
-case class ComplexSelector(combinator: String, x: CompoundSelector, xs: Option[ComplexSelector])
+case class ComplexSelector(combinator: Char, x: CompoundSelector, xs: Option[ComplexSelector])
   extends AbstractSelector[ComplexSelector]((xs match {
-    case Some(c) => c.toString
-    case _ => ""
-  }) + combinator + x) {
+    case Some(c) => c + combinator.toString + x
+    case _ => x.toString
+  })) {
 
-  def apply(combinator: String, compound: CompoundSelector): ComplexSelector =
+  def apply(combinator: Char, compound: CompoundSelector): ComplexSelector =
     new ComplexSelector(combinator, compound, Some(this))
 
-  private def findSubSelector(combinators: Seq[String], selector: ComplexSelector): Boolean = {
+  // private def findSubSelector(combinators: Seq[Char], selector: Option[ComplexSelector]): Boolean = { selector match {
+  private def findSubSelector(combinators: Seq[Char], selector: ComplexSelector): Boolean = {
+  // selector match {
+  //   case Some(s) =>
+  //     if (!combinators.contains(s.combinator)) findSubSelector(combinators, s.xs)
+  //     else xs.get.containsSelector(s)
+  //   case _ => false
+  // }
+
     var otherXs = selector.xs.getOrElse(null)
     var r: Boolean = false
 
@@ -88,14 +96,14 @@ case class ComplexSelector(combinator: String, x: CompoundSelector, xs: Option[C
       if (otherXs == null) return false
       r = xs.get.contains(otherXs) // loop2
       if (r) return r
-      var c: String= ""
+      var c: Char = '\0'
       // skip sibling selector
-      do {
+      while (!combinators.contains(c)) {
         c = otherXs.combinator
-        if (c.isEmpty) return false
+        if (c == '\0') return false
         otherXs = otherXs.xs.getOrElse(null)
         if (otherXs == null) return false
-      } while (!combinators.contains(c))
+      }
     }
     false
   }
@@ -105,15 +113,15 @@ case class ComplexSelector(combinator: String, x: CompoundSelector, xs: Option[C
 		if (!r) return r
 
 		// guarantee contains call against ComplexSelector
-		if (combinator.isEmpty) return r
+		if (combinator == '\0') return r
 
-		(combinator(0): @switch) match {
+		(combinator: @switch) match {
 			case ' ' =>
-				findSubSelector(Seq(" ", ">"), s)
+				findSubSelector(Seq(' ', '>'), s)
 			case '~' =>
-				findSubSelector(Seq("~", "+"), s)
+				findSubSelector(Seq('~', '+'), s)
 			case _ =>
-				xs.get.contains(s.xs.get)
+				xs.get.containsSelector(s.xs.get)
 		}
   }
 }
@@ -137,19 +145,6 @@ case class CompoundSelector(simpleSelectors: List[SimpleSelector])
 abstract class SimpleSelector(x: String, xs: String)
   extends AbstractSelector[SimpleSelector](x + xs)
 
-// object SimpleSelector {
-//   // optimization: use table switch
-//   def apply(x: String, xs: String): SimpleSelector = (x(0): @switch) match {
-//     case '#'  => new IDSelector(xs)
-//     case '.' => new ClassSelector(xs)
-//     case ':' => PsuedoClass(xs)
-//     case '[' =>
-//       require(xs.last == ']')
-//       new AttributeSelector(xs.init)
-//     case _ => new TypeSelector(x)
-//   }
-// }
-
 case class IDSelector(val id: String) extends SimpleSelector("#", id) {
   def containsSelector(selector: SimpleSelector): Boolean = selector match {
     case s: IDSelector => id == s.id
@@ -165,41 +160,41 @@ case class ClassSelector(val cls: String) extends SimpleSelector(".", cls) {
 }
 
 // BULLSHIT
-case class AttributeSelector(source: String) extends SimpleSelector("[", source) {
+case class AttributeSelector(attr: String, rel: Char, value: String) extends SimpleSelector("[", attr+rel+value+"]") {
   // scala matches and only matches whole string, as Java does
   // so ^$ anchors are redundant
-  private final val Attr = """^(.*?)(?:([~|^$*]?=)(['"]?)(.*)\3)?$""".r
-  val Attr(attr, rel, _, value) = source
+  // private final val Attr = """^(.*?)(?:([~|^$*]?=)(['"]?)(.*)\3)?$""".r
+  // val Attr(attr, rel, _, value) = source
 
-  override def toString: String = "[" + source + "]"
+  // override def toString: String = "[" + source + "]"
 
   def containsSelector(selector: SimpleSelector): Boolean = selector match {
     case s: AttributeSelector =>
       if (attr != s.attr) false
-      else if (rel == null) true
+      else if (rel == '\0') true
       else if (rel == s.rel && value == s.value) true
-      else if (s.rel == null) false
-      else rel match {
-          case "~=" =>
+      else if (s.rel == '\0') false
+      else (rel: @switch) match {
+          case '~' =>
             val otherVals = s.value.split("\\s+")
-            s.rel match {
-              case "=" => otherVals.contains(value)
-              case "^=" => otherVals.init.contains(value)
-              case "$=" => otherVals.tail.contains(value)
-              case "*=" => otherVals.tail.init.contains(value)
+            (s.rel: @switch) match {
+              case '=' => otherVals.contains(value)
+              case '^' => otherVals.init.contains(value)
+              case '$' => otherVals.tail.contains(value)
+              case '*' => otherVals.tail.init.contains(value)
               case _ => false
             }
-          case "|=" =>
-            "=" == s.rel && (value == s.value || s.value.take(value.length+1) == value + "-") ||
-            ("^=" == s.rel || s.value.take(value.length+1) == value + "-")
-          case "^=" => (!value.isEmpty) &&
-            ("=" == s.rel || "|=" == s.rel || "^=" == s.rel) &&
+          case '|' =>
+            '=' == s.rel && (value == s.value || s.value.take(value.length+1) == value + "-") ||
+            ('^' == s.rel || s.value.take(value.length+1) == value + "-")
+          case '^' => (!value.isEmpty) &&
+            ('=' == s.rel || '|' == s.rel || '^' == s.rel) &&
             (value == s.value.take(value.length))
-          case "$=" => (!value.isEmpty) &&
-            ("=" == s.rel || "$=" == s.rel) &&
+          case '$' => (!value.isEmpty) &&
+            ('=' == s.rel || '$' == s.rel) &&
             (value == s.value.takeRight(value.length))
-          case "*=" =>
-            (!value.isEmpty) && s.value != null && s.value.contains(value)
+          case '*' =>
+            (!value.isEmpty) &&  s.value.contains(value)
           case _ =>
             false
       }
@@ -223,36 +218,32 @@ abstract class PsuedoClass(source: String) extends SimpleSelector(":", source)
 class NthPC(pc: String, source: String) extends PsuedoClass(NthPC.format(pc, source)) {
   val last: Boolean = pc matches "last-.*"
   val child: Boolean = pc matches ".*?-child"
-  var a: Int = 0
-  var b: Int = 1
   // optional B
   private final val `An+B` = """([+-]?\d?)n([+-]\d+)?""".r
   // optional An
   private final val `B+An` = """([+-]?\d+)(?:([+-]\d?)n)?""".r
 
-  (source.replace(" ", "")) match {
+  val (a, b) = (source.replace(" ", "")) match {
     case "even" =>
-      a = 2
-      b = 0
+      (2, 0)
     case "odd" =>
-      a = 2
-      b = 1
+      (2, 1)
     case `An+B`(a_, b_) =>
-      a = a_ match {
+      (a_ match {
         case "" | "+" => 1
         case "-" => -1
         case _ => a_.toInt
-      }
-      b = if (b_ == null) 0 else b_.toInt
+      },
+      if (b_ == null) 0 else b_.toInt)
     case `B+An`(b_, a_) =>
-      b = b_.toInt
-      a = a_ match {
+      (a_ match {
         case "+" => 1
         case "-" => -1
         case _: String => a_.toInt
         case _ => 0
-      }
+      }, b_.toInt)
     case _ =>
+      (0, 1)
   }
 
   def containsSelector(selector: SimpleSelector): Boolean = selector match {
