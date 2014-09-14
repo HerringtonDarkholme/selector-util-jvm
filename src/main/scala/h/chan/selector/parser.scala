@@ -12,14 +12,14 @@ object CSSParser extends RegexParsers  {
 
   // TODO: this is CSS2 spec
   // /\0-\277/.test('.') is right in javascript
-  // private final val h = "[0-9a-fA-F]";
-  // private final val unicode = """\\{h}{1,6}(\r\n|[ \t\r\n\f])?""".replace("{h}", h)
-  // private final val escape = """({unicode}|\\[^\r\n\f0-9a-f])""".replace("{unicode}", unicode)
-  // private final val nonascii = """[^\0000-\0277]"""
-  // private final val nmchar = "([_A-Za-z0-9-]|{nonascii}|{escape})".replace("{nonascii}", nonascii).replace("{escape}", escape)
-  // private final val nmstart = "([_A-Za-z]|{nonascii}|{escape})".replace("{nonascii}", nonascii).replace("{escape}", escape)
-  // private final val ident = "-?{nmstart}{nmchar}*".replace("{nmstart}", nmstart).replace("{nmchar}", nmchar).r
-  private final val ident = "[0-9A-Za-z_-]+".r
+  private final val h = "[0-9a-fA-F]";
+  private final val unicode = """\\{h}{1,6}(\r\n|[ \t\r\n\f])?""".replace("{h}", h)
+  private final val escape = """({unicode}|\\[^\r\n\f0-9a-f])""".replace("{unicode}", unicode)
+  private final val nonascii = """[^\0000-\0277]"""
+  private final val nmchar = "([_A-Za-z0-9-]|{nonascii}|{escape})".replace("{nonascii}", nonascii).replace("{escape}", escape)
+  private final val nmstart = "([_A-Za-z]|{nonascii}|{escape})".replace("{nonascii}", nonascii).replace("{escape}", escape)
+  private final val ident = "-?{nmstart}{nmchar}*".replace("{nmstart}", nmstart).replace("{nmchar}", nmchar).r
+  // private final val ident = "[0-9A-Za-z_-]+".r
 
   def ListParser: Parser[SelectorList] = repsep(ComplexParser, "\\s*,\\s*".r) ^^ {
     case cmpList => SelectorList(cmpList)

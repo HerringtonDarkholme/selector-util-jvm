@@ -8,9 +8,7 @@ import scala.annotation.{switch, tailrec}
 
 object Selector {
   // REGEX: /*comment*/ |\ffsd | \# | .
-  final val REGEX = new Regex("""(/\*.*?\*/)|\\(?:([0-9a-fA-F]{1,6}\s)|([/,\s>+~#.:\[])|.)""",
-    "comment", "hexDigits", "specialChar"
-  )
+  final val REGEX = """(/\*.*?\*/)""".r
 
   // TODO: handle error
   def apply(source: String): SelectorList = {
@@ -18,28 +16,11 @@ object Selector {
   }
 
   // conditional normalization:
-  // normalize only when / or \\ exists
+  // normalize only when /  exists
 	// Upadte: Performance improvment confirmed
   def normalize(source: String) =
-		if (source.indexOf("\\") < 0 && source.indexOf("/") < 0) source
-		else	REGEX.replaceAllIn(source, replacer _)
-
-  // consider using Regex.unapplySeq
-  // Update: no performance gain
-  private def replacer(m: Match): String = {
-    val Seq(comment, hexDigits, specialChar) = m.subgroups
-    if (comment != null) return ""
-    val hex: String =
-      if (hexDigits != null) hexDigits.init
-      else if (specialChar != null) specialChar(0).toHexString
-      else null
-
-    if (hex == null) return m.matched
-    val nextChar = m.source.charAt(m.end).toString
-    if (nextChar matches "[0-9a-fA-F]") "\\" + ("000000" + hex).takeRight(6)
-    else if (nextChar matches """\s""") "\\" + hex + " "
-    else "\\" + hex
-  }
+		if (source.indexOf("/") < 0) source
+		else	REGEX.replaceAllIn(source, "")
 }
 
 abstract class AbstractSelector[S <: AbstractSelector[S]] {
@@ -106,23 +87,6 @@ case class CompoundSelector(tpe: String, simpleSelectors: List[SimpleSelector])
 
 abstract class SimpleSelector extends AbstractSelector[SimpleSelector]
 
-
-// case class IDSelector(val id: String) extends SimpleSelector {
-//   def containsSelector(selector: SimpleSelector): Boolean = selector match {
-//     case s: IDSelector => id == s.id
-//     case _ => false
-//   }
-
-//   override def toString = "#" + id
-// }
-
-// case class ClassSelector(val cls: String) extends SimpleSelector {
-//   def containsSelector(selector: SimpleSelector) = selector match {
-//     case s: ClassSelector => cls == s.cls
-//     case _ => false
-//   }
-//   override def toString = "." + cls
-// }
 
 // BULLSHIT
 case class AttributeSelector(attr: String, rel: Char, value: String) extends SimpleSelector {
@@ -248,4 +212,3 @@ private object NthPC {
 case class NotPC(sels: SelectorList) extends PsuedoClass {
   def containsSelector(sel: SimpleSelector) = true
 }
-
