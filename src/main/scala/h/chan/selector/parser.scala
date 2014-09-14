@@ -41,7 +41,7 @@ object CSSParser extends RegexParsers  {
   def ComplexParser: Parser[ComplexSelector] =
     chainl1(ComplexZero, CompoundParser, (Combinator|Whitespace))
 
-  def CompoundParser: Parser[CompoundSelector] = (ident|"*") ~ rep(SimpleParser) ^^ {
+  def CompoundParser: Parser[CompoundSelector] = (ident|"*") ~! rep(SimpleParser) ^^ {
     case tpe ~ sl =>
       CompoundSelector(tpe, sl)
   } |
@@ -64,7 +64,7 @@ object CSSParser extends RegexParsers  {
 
   def PsuedoParser: Parser[PsuedoClass] =
     // Parser Combinator does not recognize /.+?/
-  (":" ~> ident ~ "(" ~ "[^)]+".r <~ ")" ) ^^ {
+  (":" ~> ident ~ "(" ~! "[^)]+".r <~ ")" ) ^^ {
     case pc ~ _ ~ source => new NthPC(pc, source)
   } | (":" ~> ident) ^^ {
     case pc => new NthPC(pc, "")
@@ -79,7 +79,7 @@ object CSSParser extends RegexParsers  {
     case attr =>
       AttributeSelector(attr, '\u0000', "")
   } |
-  ("[" ~> ident ~ rel ~ (ident|str) <~ "]") ^^ {
+  ("[" ~> ident ~! rel ~! (ident|str) <~ "]") ^^ {
     case attr ~ rel ~ value =>
       AttributeSelector(attr, rel.head, value)
   }
