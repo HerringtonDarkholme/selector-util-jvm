@@ -168,17 +168,6 @@ case class AttributeSelector(attr: String, rel: Char, value: String) extends Sim
   }
 }
 
-case class TypeSelector(n: String) extends SimpleSelector {
-  val name = if (n == null || n.isEmpty) "*" else n
-  @inline private def isUniversal = name == "*"
-
-  def containsSelector(selector: SimpleSelector): Boolean = isUniversal || (selector match {
-    case s: TypeSelector => name == s.name
-    case _ => isUniversal
-  })
-
-  override def toString = n
-}
 
 abstract class PsuedoClass extends SimpleSelector
 

@@ -83,7 +83,4 @@ object CSSParser extends RegexParsers with PackratParsers {
       AttributeSelector(attr, rel.head, value)
   }
 
-  def TypeParser: Parser[TypeSelector] = ("*" | ident) ^^ {
-    case tag => TypeSelector(tag)
-  }
 }
