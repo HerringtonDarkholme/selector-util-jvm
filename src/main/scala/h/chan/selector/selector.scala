@@ -63,7 +63,7 @@ class ComplexSelector(val combinator: Char, val x: CompoundSelector, val xs: Com
 
   @tailrec
   private final def findSubSelector(combinators: Seq[Char], s: ComplexSelector): Boolean = {
-    if (s.combinator == '\0') false
+    if (s.combinator == '\u0000') false
     else if (!combinators.contains(s.combinator)) findSubSelector(combinators, s.xs)
     else containsSelector(s.xs) || findSubSelector(combinators, s.xs)
   }
@@ -72,13 +72,13 @@ class ComplexSelector(val combinator: Char, val x: CompoundSelector, val xs: Com
 		var r = x.containsSelector(s.x)
 		if (!r) return r
 
-		if (combinator == '\0') return r
+		if (combinator == '\u0000') return r
 
 		(combinator: @switch) match {
 			case ' ' => xs.findSubSelector(Seq(' ', '>'), s)
 			case '~' => xs.findSubSelector(Seq('~', '+'), s)
 			case _ =>
-        if (s.combinator == '\0') false
+        if (s.combinator == '\u0000') false
         else xs.containsSelector(s.xs)
 		}
   }
@@ -89,15 +89,12 @@ class ComplexSelector(val combinator: Char, val x: CompoundSelector, val xs: Com
   }
 }
 
-case class CompoundSelector(simpleSelectors: List[SimpleSelector])
+case class CompoundSelector(tpe: String, simpleSelectors: List[SimpleSelector])
   extends AbstractSelector[CompoundSelector] {
 
-  // val tpe: TypeSelector = new TypeSelector("*")
-
   def containsSelector(s: CompoundSelector): Boolean =  {
-		// val r = this.tpe.contains(s.tpe)
-		// if (!r) return r
-		simpleSelectors.forall {s0 =>
+		if (tpe != "*" && tpe != s.tpe) false
+    else simpleSelectors.forall {s0 =>
 			s.simpleSelectors.exists {s1 =>
 				s0.containsSelector(s1)
 			}
@@ -139,9 +136,9 @@ case class AttributeSelector(attr: String, rel: Char, value: String) extends Sim
   def containsSelector(selector: SimpleSelector): Boolean = selector match {
     case s: AttributeSelector =>
       if (attr != s.attr) false
-      else if (rel == '\0') true
+      else if (rel == '\u0000') true
       else if (rel == s.rel && value == s.value) true
-      else if (s.rel == '\0') false
+      else if (s.rel == '\u0000') false
       else (rel: @switch) match {
           case '~' =>
             val otherVals = s.value.split("\\s+")

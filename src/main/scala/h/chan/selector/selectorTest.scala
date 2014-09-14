@@ -9,23 +9,23 @@ object SelectorTest {
   def main(args: Array[String]): Unit = {
     test()
     var i = 100
-    var then = System.nanoTime
+    var start = System.nanoTime
     while (i > 0) {
       bench()
       i -= 1
     }
     var now = System.nanoTime
-    var benchmark = (now -then)/1e6
+    var benchmark = (now -start)/1e6
     println("warmup | 100 loops | time: " + benchmark + "ms")
 
     i = 100
-    then = System.nanoTime
+    start = System.nanoTime
     while (i > 0) {
       bench()
       i -= 1
     }
     now = System.nanoTime
-    benchmark = (now -then)/1e6
+    benchmark = (now -start)/1e6
     println("bench | 100 loops | time: " + benchmark + "ms")
   }
 

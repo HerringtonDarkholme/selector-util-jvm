@@ -24,16 +24,20 @@ object CSSParser extends RegexParsers with PackratParsers {
     } |
     (CompoundParser) ^^ {
       case cpd =>
-        new ComplexSelector('\0', cpd, null)
+        new ComplexSelector('\u0000', cpd, null)
     }
 
-  def CompoundParser: Parser[CompoundSelector] = rep1(SimpleParser) ^^ {
-      case sl =>
-        CompoundSelector(sl)
-    }
+  def CompoundParser: Parser[CompoundSelector] = (ident|"*") ~ rep(SimpleParser) ^^ {
+    case tpe ~ sl =>
+      CompoundSelector(tpe, sl)
+  } |
+  rep1(SimpleParser) ^^ {
+    case sl =>
+      CompoundSelector("*", sl)
+  }
 
   def SimpleParser: Parser[SimpleSelector] =
-    IDParser | ClassParser | PsuedoParser | AttributeParser | TypeParser
+    IDParser | ClassParser | PsuedoParser | AttributeParser
 
   // refer to CSS spec
   // TODO: add namespace support
@@ -72,7 +76,7 @@ object CSSParser extends RegexParsers with PackratParsers {
   private final val str = """'[^']*(\\'[^']*)*'|"[^"]*(\\"[^"]*)*"""".r
   def AttributeParser: Parser[AttributeSelector] = ("[" ~> ident <~"]") ^^ {
     case attr =>
-      AttributeSelector(attr, '\0', "")
+      AttributeSelector(attr, '\u0000', "")
   } |
   ("[" ~> ident ~ rel ~ (ident|str) <~ "]") ^^ {
     case attr ~ rel ~ value =>
