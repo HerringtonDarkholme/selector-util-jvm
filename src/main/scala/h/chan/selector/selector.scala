@@ -107,22 +107,22 @@ case class CompoundSelector(tpe: String, simpleSelectors: List[SimpleSelector])
 abstract class SimpleSelector extends AbstractSelector[SimpleSelector]
 
 
-case class IDSelector(val id: String) extends SimpleSelector {
-  def containsSelector(selector: SimpleSelector): Boolean = selector match {
-    case s: IDSelector => id == s.id
-    case _ => false
-  }
+// case class IDSelector(val id: String) extends SimpleSelector {
+//   def containsSelector(selector: SimpleSelector): Boolean = selector match {
+//     case s: IDSelector => id == s.id
+//     case _ => false
+//   }
 
-  override def toString = "#" + id
-}
+//   override def toString = "#" + id
+// }
 
-case class ClassSelector(val cls: String) extends SimpleSelector {
-  def containsSelector(selector: SimpleSelector) = selector match {
-    case s: ClassSelector => cls == s.cls
-    case _ => false
-  }
-  override def toString = "." + cls
-}
+// case class ClassSelector(val cls: String) extends SimpleSelector {
+//   def containsSelector(selector: SimpleSelector) = selector match {
+//     case s: ClassSelector => cls == s.cls
+//     case _ => false
+//   }
+//   override def toString = "." + cls
+// }
 
 // BULLSHIT
 case class AttributeSelector(attr: String, rel: Char, value: String) extends SimpleSelector {
@@ -249,17 +249,3 @@ case class NotPC(sels: SelectorList) extends PsuedoClass {
   def containsSelector(sel: SimpleSelector) = true
 }
 
-object PsuedoClass {
-  private final val PsuedoDef = """^(.+?)(?:\((.*?)\))?$""".r
-  def apply(source: String): PsuedoClass = {
-    val PsuedoDef(constructor, argument) = source
-    constructor match {
-      case "nth-child" | "nth-last-child" |"nth-of-type" | "nth-last-of-type" =>
-        new NthPC(constructor, argument)
-      case "first-child" | "first-of-type" | "last-child" | "last-of-type"  =>
-        new NthPC(constructor, "")
-      case _ => sys.error("unsupported type")
-    }
-  }
-
-}

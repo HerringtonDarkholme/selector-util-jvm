@@ -54,19 +54,20 @@ object CSSParser extends RegexParsers  {
     IDParser | ClassParser | PsuedoParser | AttributeParser
 
 
-  def IDParser: Parser[IDSelector] = ("#" ~> ident) ^^ {
-    case id => IDSelector(id)
+  def IDParser: Parser[AttributeSelector] = ("#" ~> ident) ^^ {
+    case id => AttributeSelector("id", '=', id)
   }
 
-  def ClassParser: Parser[ClassSelector] = ("." ~> ident) ^^ {
-    case cls => ClassSelector(cls)
+  def ClassParser: Parser[AttributeSelector] = ("." ~> ident) ^^ {
+    case id => AttributeSelector("class", '=', id)
   }
 
   def PsuedoParser: Parser[PsuedoClass] =
     // Parser Combinator does not recognize /.+?/
   (":" ~> ident ~ "(" ~! "[^)]+".r <~ ")" ) ^^ {
     case pc ~ _ ~ source => new NthPC(pc, source)
-  } | (":" ~> ident) ^^ {
+  } |
+  (":" ~> ident) ^^ {
     case pc => new NthPC(pc, "")
   } |
   (":not(" ~> ListParser <~ ")") ^^ {
