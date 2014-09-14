@@ -101,7 +101,7 @@ case class CompoundSelector(tpe: String, simpleSelectors: List[SimpleSelector])
 		}
   }
 
-  override def toString = simpleSelectors.mkString("")
+  override def toString = tpe + simpleSelectors.mkString("")
 }
 
 abstract class SimpleSelector extends AbstractSelector[SimpleSelector]

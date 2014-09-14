@@ -3,41 +3,9 @@ package h.chan.selector
 import scala.util.parsing.combinator.RegexParsers
 import scala.util.parsing.combinator.PackratParsers
 
-object CSSParser extends RegexParsers with PackratParsers {
+object CSSParser extends RegexParsers  {
 
   override def skipWhitespace = false
-
-  def ListParser: Parser[SelectorList] = repsep(ComplexParser, "\\s*,\\s*".r) ^^ {
-    case cmpList => SelectorList(cmpList)
-  }
-
-  private final val Combinator = """\s*[+>~]\s*""".r
-  private final val Whitespace = """\s+""".r
-  lazy val ComplexParser: PackratParser[ComplexSelector] =
-    (ComplexParser ~ Combinator ~ CompoundParser) ^^ {
-      case cpx ~ cmb ~ cpd =>
-        new ComplexSelector(cmb.trim.head, cpd, cpx)
-    } |
-    (ComplexParser ~ Whitespace ~ CompoundParser) ^^ {
-      case cpx ~ _ ~ cpd =>
-        new ComplexSelector(' ', cpd, cpx)
-    } |
-    (CompoundParser) ^^ {
-      case cpd =>
-        new ComplexSelector('\u0000', cpd, null)
-    }
-
-  def CompoundParser: Parser[CompoundSelector] = (ident|"*") ~ rep(SimpleParser) ^^ {
-    case tpe ~ sl =>
-      CompoundSelector(tpe, sl)
-  } |
-  rep1(SimpleParser) ^^ {
-    case sl =>
-      CompoundSelector("*", sl)
-  }
-
-  def SimpleParser: Parser[SimpleSelector] =
-    IDParser | ClassParser | PsuedoParser | AttributeParser
 
   // refer to CSS spec
   // TODO: add namespace support
@@ -52,6 +20,39 @@ object CSSParser extends RegexParsers with PackratParsers {
   // private final val nmstart = "([_A-Za-z]|{nonascii}|{escape})".replace("{nonascii}", nonascii).replace("{escape}", escape)
   // private final val ident = "-?{nmstart}{nmchar}*".replace("{nmstart}", nmstart).replace("{nmchar}", nmchar).r
   private final val ident = "[0-9A-Za-z_-]+".r
+
+  def ListParser: Parser[SelectorList] = repsep(ComplexParser, "\\s*,\\s*".r) ^^ {
+    case cmpList => SelectorList(cmpList)
+  }
+
+  private final val Combinator = """\s*[+>~]\s*""".r ^^ {
+    case cmb => (cpx: ComplexSelector, cpd: CompoundSelector) =>
+      new ComplexSelector(cmb.trim.head, cpd, cpx)
+  }
+  private final val Whitespace = """\s+""".r ^^ {
+    case cmb => (cpx: ComplexSelector, cpd: CompoundSelector) =>
+      new ComplexSelector(' ', cpd, cpx)
+  }
+  private final val ComplexZero = CompoundParser ^^ {
+    case cpd =>
+      new ComplexSelector('\u0000', cpd, null)
+  }
+
+  def ComplexParser: Parser[ComplexSelector] =
+    chainl1(ComplexZero, CompoundParser, (Combinator|Whitespace))
+
+  def CompoundParser: Parser[CompoundSelector] = (ident|"*") ~ rep(SimpleParser) ^^ {
+    case tpe ~ sl =>
+      CompoundSelector(tpe, sl)
+  } |
+  rep1(SimpleParser) ^^ {
+    case sl =>
+      CompoundSelector("*", sl)
+  }
+
+  def SimpleParser: Parser[SimpleSelector] =
+    IDParser | ClassParser | PsuedoParser | AttributeParser
+
 
   def IDParser: Parser[IDSelector] = ("#" ~> ident) ^^ {
     case id => IDSelector(id)
