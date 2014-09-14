@@ -2,8 +2,6 @@
 //  Update: no performance gain but idiomatic
 package h.chan.selector
 
-import scala.util.matching.Regex.Match
-import scala.util.matching.Regex
 import scala.annotation.{switch, tailrec}
 
 object Selector {
@@ -177,9 +175,7 @@ class NthPC(pc: String, source: String) extends PsuedoClass {
       if (s.a == 0) {
         if (a == 0) return b == s.b
         val na = s.b - b
-        return (na == 0) || (
-          (na % a == 0) && (na * a > 0)
-        )
+        return (na % a == 0) && (na * a >= 0)
       }
       if (s.a > 0) {
         if (a <= 0 || (s.a % a != 0))  return false
