@@ -10,7 +10,7 @@ object Selector {
 
   // TODO: handle error
   def apply(source: String): SelectorList = {
-    CSSParser.parseAll(CSSParser.ListParser, normalize(source)).get
+    new CSS(normalize(source)).List.run().get
   }
 
   // conditional normalization:
@@ -25,7 +25,7 @@ abstract class AbstractSelector[S <: AbstractSelector[S]] {
   def containsSelector(selector: S): Boolean
 }
 
-case class SelectorList(list: List[ComplexSelector])
+case class SelectorList(list: Seq[ComplexSelector])
 	extends AbstractSelector[SelectorList] {
 
   def containsSelector(sl: SelectorList) =
@@ -68,7 +68,7 @@ class ComplexSelector(val combinator: Char, val x: CompoundSelector, val xs: Com
   }
 }
 
-case class CompoundSelector(tpe: String, simpleSelectors: List[SimpleSelector])
+case class CompoundSelector(tpe: String, simpleSelectors: Seq[SimpleSelector])
   extends AbstractSelector[CompoundSelector] {
 
   def containsSelector(s: CompoundSelector): Boolean =  {
