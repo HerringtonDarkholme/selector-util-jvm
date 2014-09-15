@@ -1,0 +1,29 @@
+import org.parboiled2._
+
+class T(val input: ParserInput) extends Parser {
+  def InputLine = rule {  AttrSel ~ EOI }
+
+  def Tag = rule { capture(Ident) ~> (TypeSelector(_)) }
+
+	def IDSel = rule {'#' ~ capture(Ident) ~> (IDSelector(_))}
+
+	def ClsSel = rule {'.' ~ capture(Ident) ~> (ClsSelector(_))}
+
+	def AttrSel = rule { Attr1 | Attr2 }
+
+	def Attr1 = rule { '[' ~ capture(Ident) ~ ']' ~> (AttrSelector(_, "", "")) }
+	def Attr2 = rule { '[' ~ capture(Ident) ~ capture(AttrRel) ~ capture(Ident) ~ ']' ~> {
+		AttrSelector(_, _, _)
+	}}
+
+	def Ident = rule { oneOrMore(CharPredicate.AlphaNum ++ '-' ++ '_') }
+	def AttrRel = rule { optional(ch('^') | '~' | '$' | '*') ~ '='}
+	def Str = Ident // for now alias to
+
+	case class TypeSelector(s: String)
+	case class IDSelector(id: String)
+	case class ClsSelector(cls: String)
+	case class AttrSelector(attr: String, rel: String, value: String)
+}
+
+new T("[name^=hahaha]").InputLine.run()
