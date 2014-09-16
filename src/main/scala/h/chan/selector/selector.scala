@@ -28,11 +28,25 @@ abstract class AbstractSelector[S <: AbstractSelector[S]] {
 case class SelectorList(list: Seq[ComplexSelector])
 	extends AbstractSelector[SelectorList] {
 
+	private[this] val fixReg = "#[a-zA-Z0-9-_]+".r
+	private[this] val isSingle = list.length == 1
+	private[this] val fixStr =
+		if (isSingle) fixReg.findFirstIn(toString).getOrElse(" ").tail
+		else ""
+
   def containsSelector(sl: SelectorList) =
     sl.list.forall(s => list.exists {sel => sel containsSelector s})
 
-  def contains(selectorSource: String): Boolean =
-    containsSelector(Selector(selectorSource))
+  def contains(source: String): Boolean = {
+		if (isSingle && ((source indexOf fixStr) < 0)) {
+			return false
+		}
+		if (!source.contains(',')) {
+			list.exists{s => s containsSelector (new CSS(source).Complex.run().get)}
+		} else {
+			containsSelector(Selector(source))
+		}
+	}
 
   override def toString = list.mkString(", ")
 }
@@ -93,7 +107,9 @@ case class AttributeSelector(attr: String, rel: Char, value: String) extends Sim
   // private final val Attr = """^(.*?)(?:([~|^$*]?=)(['"]?)(.*)\3)?$""".r
   // val Attr(attr, rel, _, value) = source
 
-  override def toString: String = "["+attr+rel+value+"]"
+  override def toString: String =
+		if (attr == "id" && rel == '=') "#" + value
+		else "["+attr+rel+value+"]"
 
   def containsSelector(selector: SimpleSelector): Boolean = selector match {
     case s: AttributeSelector =>
@@ -134,8 +150,8 @@ case class AttributeSelector(attr: String, rel: Char, value: String) extends Sim
 abstract class PsuedoClass extends SimpleSelector
 
 class NthPC(pc: String, source: String) extends PsuedoClass {
-  val last: Boolean = pc matches "last-.*"
-  val child: Boolean = pc matches ".*?-child"
+  val last: Boolean = pc startsWith "last-"
+  val child: Boolean = pc endsWith "-child"
   // optional B
   private final val `An+B` = """([+-]?\d?)n([+-]\d+)?""".r
   // optional An
