@@ -5,48 +5,56 @@ package h.chan.selector
 import scala.annotation.{switch, tailrec}
 
 object Selector {
-  // REGEX: /*comment*/ |\ffsd | \# | .
+  // REGEX: /*comment*/
   final val REGEX = """(/\*.*?\*/)""".r
 
   // TODO: handle error
-  def apply(source: String): SelectorList = {
-    new CSS(normalize(source)).List.run().get
-  }
+  def apply(source: String): SelectorsOpt =
+    SelectorsOpt(normalize(source))
+
+  def general(source: String): SelectorList =
+    new SelectorList(normalize(new CSS(source).List.run().get))
 
   // conditional normalization:
-  // normalize only when /  exists
-	// Upadte: Performance improvment confirmed
+  // Upadte: Performance improvment confirmed
   def normalize(source: String) =
-		if (source.indexOf("/") < 0) source
-		else	REGEX.replaceAllIn(source, "")
+    if (source.indexOf("/") < 0) source
+    else  REGEX.replaceAllIn(source, "")
+}
+
+case class SelectorsOpt(source: String)
+  extends SelectorList(new CSS(source).List.run().get)
+  with FixStringOpt
+
+trait FixStringOpt { this: SelectorList =>
+  val source: String
+
+  final val fixReg = "#[a-zA-Z0-9-_]+".r
+  val isSingle = list.length == 1
+  val fixStr =
+    if (isSingle) fixReg.findFirstIn(source).getOrElse(" ").tail
+    else ""
+
+  override def contains(source: String): Boolean = {
+    if (isSingle && ((source indexOf fixStr) < 0)) {
+      return false
+    }
+    containsSelector(Selector.general(source))
+  }
 }
 
 abstract class AbstractSelector[S <: AbstractSelector[S]] {
   def containsSelector(selector: S): Boolean
 }
 
-case class SelectorList(list: Seq[ComplexSelector])
-	extends AbstractSelector[SelectorList] {
-
-	private[this] val fixReg = "#[a-zA-Z0-9-_]+".r
-	private[this] val isSingle = list.length == 1
-	private[this] val fixStr =
-		if (isSingle) fixReg.findFirstIn(toString).getOrElse(" ").tail
-		else ""
+class SelectorList(val list: Seq[ComplexSelector])
+  extends AbstractSelector[SelectorList] {
 
   def containsSelector(sl: SelectorList) =
     sl.list.forall(s => list.exists {sel => sel containsSelector s})
 
-  def contains(source: String): Boolean = {
-		if (isSingle && ((source indexOf fixStr) < 0)) {
-			return false
-		}
-		if (!source.contains(',')) {
-			list.exists{s => s containsSelector (new CSS(source).Complex.run().get)}
-		} else {
-			containsSelector(Selector(source))
-		}
-	}
+  def contains(source: String) =
+    containsSelector(Selector.general(source))
 
   override def toString = list.mkString(", ")
 }
@@ -62,18 +70,18 @@ class ComplexSelector(val combinator: Char, val x: CompoundSelector, val xs: Com
   }
 
   def containsSelector(s: ComplexSelector): Boolean = {
-		var r = x.containsSelector(s.x)
-		if (!r) return r
+    var r = x.containsSelector(s.x)
+    if (!r) return r
 
-		if (combinator == '\u0000') return r
+    if (combinator == '\u0000') return r
 
-		(combinator: @switch) match {
-			case ' ' => xs.findSubSelector(Seq(' ', '>'), s)
-			case '~' => xs.findSubSelector(Seq('~', '+'), s)
-			case _ =>
+    (combinator: @switch) match {
+      case ' ' => xs.findSubSelector(Seq(' ', '>'), s)
+      case '~' => xs.findSubSelector(Seq('~', '+'), s)
+      case _ =>
         if (s.combinator == '\u0000') false
         else xs.containsSelector(s.xs)
-		}
+    }
   }
 
   override def toString = xs match {
@@ -86,12 +94,12 @@ case class CompoundSelector(tpe: String, simpleSelectors: Seq[SimpleSelector])
   extends AbstractSelector[CompoundSelector] {
 
   def containsSelector(s: CompoundSelector): Boolean =  {
-		if (tpe != "*" && tpe != s.tpe) false
+    if (tpe != "*" && tpe != s.tpe) false
     else simpleSelectors.forall {s0 =>
-			s.simpleSelectors.exists {s1 =>
-				s0.containsSelector(s1)
-			}
-		}
+      s.simpleSelectors.exists {s1 =>
+        s0.containsSelector(s1)
+      }
+    }
   }
 
   override def toString = tpe + simpleSelectors.mkString("")
@@ -108,8 +116,9 @@ case class AttributeSelector(attr: String, rel: Char, value: String) extends Sim
   // val Attr(attr, rel, _, value) = source
 
   override def toString: String =
-		if (attr == "id" && rel == '=') "#" + value
-		else "["+attr+rel+value+"]"
+    if (attr == "class" && rel == '=') "." + value
+    else if (attr == "id" && rel == '=') "#" + value
+    else "["+attr+rel+value+"]"
 
   def containsSelector(selector: SimpleSelector): Boolean = selector match {
     case s: AttributeSelector =>

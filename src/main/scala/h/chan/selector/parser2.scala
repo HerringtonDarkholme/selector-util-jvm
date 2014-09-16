@@ -6,8 +6,7 @@ class CSS(val input: ParserInput) extends Parser {
   def InputLine = rule { List ~ EOI }
 
   def List = rule {
-    oneOrMore(Complex).separatedBy(s_* ~ ',' ~ s_*) ~>
-    (SelectorList(_))
+    oneOrMore(Complex).separatedBy(s_* ~ ',' ~ s_*)
   }
 
   def Complex = rule { complexStart ~ zeroOrMore(combinator)}

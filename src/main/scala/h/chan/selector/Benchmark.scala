@@ -1,8 +1,8 @@
 package h.chan.selector
 
-import org.openjdk.jmh.annotations._
+// import org.openjdk.jmh.annotations._
 
-@State(Scope.Benchmark)
+// @State(Scope.Benchmark)
 class SelectorBench {
 
 
@@ -140,7 +140,7 @@ class SelectorBench {
 "div#top-filters+ul>li:nth-of-type(14)>div:first-child>a:first-child",
 "div#top-filters>form:first-child>div:nth-of-type(2)>div:first-of-type>a:nth-of-type(3)")
 
-  @Benchmark
+  // @Benchmark
   def test() {
     facilities.foreach { f =>
       val s = Selector(f.trim.toLowerCase)
