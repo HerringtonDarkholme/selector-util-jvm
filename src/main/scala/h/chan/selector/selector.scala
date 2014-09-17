@@ -108,12 +108,7 @@ case class CompoundSelector(tpe: String, simpleSelectors: Seq[SimpleSelector])
 abstract class SimpleSelector extends AbstractSelector[SimpleSelector]
 
 
-// BULLSHIT
 case class AttributeSelector(attr: String, rel: Char, value: String) extends SimpleSelector {
-  // scala matches and only matches whole string, as Java does
-  // so ^$ anchors are redundant
-  // private final val Attr = """^(.*?)(?:([~|^$*]?=)(['"]?)(.*)\3)?$""".r
-  // val Attr(attr, rel, _, value) = source
 
   override def toString: String =
     if (attr == "class" && rel == '=') "." + value
@@ -157,8 +152,8 @@ case class AttributeSelector(attr: String, rel: Char, value: String) extends Sim
 abstract class PsuedoClass extends SimpleSelector
 
 class NthPC(pc: String, source: String) extends PsuedoClass {
-  val last: Boolean = pc startsWith "last-"
-  val child: Boolean = pc endsWith "-child"
+  private val last: Boolean = pc startsWith "last-"
+  private val child: Boolean = pc endsWith "-child"
   // optional B
   private final val `An+B` = """([+-]?\d?)n([+-]\d+)?""".r
   // optional An
@@ -218,14 +213,9 @@ class NthPC(pc: String, source: String) extends PsuedoClass {
   @inline private def firstNat(a: Int, b: Int) =
     if (b > 0) b else b % a + a
 
-  override def toString = ":" + NthPC.format(pc, source)
-}
-
-private object NthPC {
-  @inline def format(pc: String, source: String) = {
-    if (source.isEmpty) pc
-    else s"$pc($source)"
-  }
+  override def toString =
+    if (source.isEmpty) ":" + pc
+    else s":$pc($source)"
 }
 
 case class NotPC(sels: SelectorList) extends PsuedoClass {
