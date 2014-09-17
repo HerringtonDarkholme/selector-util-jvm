@@ -13,7 +13,7 @@ object Selector {
     SelectorsOpt(normalize(source))
 
   def general(source: String): SelectorList =
-    new SelectorList(normalize(new CSS(source).List.run().get))
+    new SelectorList(new CSS(normalize(source)).List.run().get)
 
   // conditional normalization:
   // Upadte: Performance improvment confirmed
