@@ -124,31 +124,31 @@ case class AttributeSelector(attr: String, rel: Char, value: String) extends Sim
     case s: AttributeSelector =>
       if (attr != s.attr) false
       else if (rel == '\u0000') true
-      else if (rel == s.rel && value == s.value) true
       else if (s.rel == '\u0000') false
+      else if (rel == s.rel && value == s.value) true
       else (rel: @switch) match {
-          case '~' =>
-            val otherVals = s.value.split("\\s+")
-            (s.rel: @switch) match {
-              case '=' => otherVals.contains(value)
-              case '^' => otherVals.init.contains(value)
-              case '$' => otherVals.tail.contains(value)
-              case '*' => otherVals.tail.init.contains(value)
-              case _ => false
-            }
-          case '|' =>
-            '=' == s.rel && (value == s.value || s.value.take(value.length+1) == value + "-") ||
-            ('^' == s.rel || s.value.take(value.length+1) == value + "-")
-          case '^' => (!value.isEmpty) &&
-            ('=' == s.rel || '|' == s.rel || '^' == s.rel) &&
-            (value == s.value.take(value.length))
-          case '$' => (!value.isEmpty) &&
-            ('=' == s.rel || '$' == s.rel) &&
-            (value == s.value.takeRight(value.length))
-          case '*' =>
-            (!value.isEmpty) &&  s.value.contains(value)
-          case _ =>
-            false
+        case '~' =>
+          val otherVals = s.value.split("\\s+")
+          (s.rel: @switch) match {
+            case '=' => otherVals.contains(value)
+            case '^' => otherVals.init.contains(value)
+            case '$' => otherVals.tail.contains(value)
+            case '*' => otherVals.tail.init.contains(value)
+            case _ => false
+          }
+        case '|' =>
+          '=' == s.rel && (value == s.value || s.value.take(value.length+1) == value + "-") ||
+          ('^' == s.rel || s.value.take(value.length+1) == value + "-")
+        case '^' =>
+          ('=' == s.rel || '|' == s.rel || '^' == s.rel) &&
+          (value == s.value.take(value.length))
+        case '$' =>
+          ('=' == s.rel || '$' == s.rel) &&
+          (value == s.value.takeRight(value.length))
+        case '*' =>
+          s.value.contains(value)
+        case _ =>
+          false
       }
     case _ =>
       false
