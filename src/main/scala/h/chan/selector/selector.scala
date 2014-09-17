@@ -137,14 +137,12 @@ case class AttributeSelector(attr: String, rel: Char, value: String) extends Sim
             case _ => false
           }
         case '|' =>
-          '=' == s.rel && (value == s.value || s.value.take(value.length+1) == value + "-") ||
-          ('^' == s.rel || s.value.take(value.length+1) == value + "-")
+          '=' == s.rel && (value == s.value || s.value.startsWith(value + "-")) ||
+          ('^' == s.rel && s.value.startsWith(value + "-"))
         case '^' =>
-          ('=' == s.rel || '|' == s.rel || '^' == s.rel) &&
-          (value == s.value.take(value.length))
+          "=|^".contains(s.rel) && s.value.startsWith(value)
         case '$' =>
-          ('=' == s.rel || '$' == s.rel) &&
-          (value == s.value.takeRight(value.length))
+          "=$".contains(s.rel) && s.value.endsWith(value)
         case '*' =>
           s.value.contains(value)
         case _ =>
