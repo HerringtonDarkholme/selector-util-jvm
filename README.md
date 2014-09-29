@@ -8,15 +8,18 @@ API
 
 ###`class Selector`###
 
-`public static SelectorsOpt apply(string selctorSource`
+`public static SelectorsOpt apply(string selctorSource)`
+
 return a `SelectorsOpt` instance.
 
 
 ###`class SelectorsOpt`###
 
 `public boolean contains(string selctorSource)`
+
 decide whether selectorSource is a sub-selector of `SelectorsOpt`
 
+For example, please see the `java` directory.
 
 *By saying that A is `sub-selector` of B, it means in every dom, the set of elements matching A is a subset of that matching B*
 
