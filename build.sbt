@@ -1,5 +1,8 @@
 // jmhSettings
 
+import AssemblyKeys._
+assemblySettings
+
 organization := "h.chan"
 
 name := "selector"
