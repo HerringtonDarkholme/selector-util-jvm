@@ -6,15 +6,15 @@ A JVM fork of selector-util
 API
 =======
 
-##`class Selector`##
+###`class Selector`###
 
-###`public static SelectorsOpt apply(string selctorSource)`###
+`public static SelectorsOpt apply(string selctorSource`
 return a `SelectorsOpt` instance.
 
 
-##`class SelectorsOpt`##
+###`class SelectorsOpt`###
 
-###`public boolean contains(string selctorSource)`###
+`public boolean contains(string selctorSource)`
 decide whether selectorSource is a sub-selector of `SelectorsOpt`
 
 
